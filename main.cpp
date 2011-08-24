@@ -13,32 +13,18 @@ const int SCREEN_BPP = 32;
 const int ROOM_WIDTH = 10;
 const int ROOM_HEIGHT = 7;
  
-/*const int TILE_WIDTH = 16;
-const int TILE_HEIGHT = 16;*/
- 
-const int TILE_WIDTH = 32;
-const int TILE_HEIGHT = 32;
+const int TILE_WIDTH = 16;
+const int TILE_HEIGHT = 16;
  
 const int CLIP_MAX = 128;
  
- 
-/*int tileArray[70] = {
+int tileArray[70] = {
         0,0,0,0,0,0,0,0,0,0,
         0,0,1,1,1,1,1,1,0,0,
         0,1,2,2,2,2,2,2,1,0,
         0,1,2,2,2,2,2,2,1,0,
         0,1,2,2,2,2,2,2,1,0,
         0,0,1,1,1,1,1,1,0,0,
-        0,0,0,0,0,0,0,0,0,0
-};*/
- 
-int tileArray[CLIP_MAX] = {
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0
 };
  
@@ -93,10 +79,10 @@ void applySurface(int x, int y, SDL_Surface* source, SDL_Surface* destination, S
  
 void generateClips(SDL_Surface* _source, int _tileWidth, int _tileHeight, SDL_Rect* clip, int _clipMax) {
         int incr = 0;
-        for (int i = 0; i < _source->h; ++i) {
-                for (int j = 0; j < _source->w; ++j) {
-                        clip[(i+j+incr)].x = ((i+j+incr) + _tileWidth);
-                        clip[(i+j+incr)].y = ((i+j+incr) + _tileHeight);
+        for (int i = 0; i < /*_source->h*/ 1; ++i) {
+                for (int j = 0; j < /*_source->w*/3; ++j) {
+                        clip[(j+incr)].x = ((j+incr) * _tileWidth);
+                        clip[(i+incr)].y = ((i+incr) * _tileHeight);
                         clip[(i+j+incr)].w = _tileWidth;
                         clip[(i+j+incr)].h = _tileHeight;
                         if (j >= _source->w)
@@ -116,30 +102,9 @@ int main(int argc, char *argv[]) {
  
         screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE);
  
-        //tileset = loadImage("tileset.png");
-        tileset = loadImage("tileset32.png");
+        tileset = loadImage("tileset16.png");
         
-        generateClips(tileset, TILE_WIDTH, TILE_HEIGHT, &clip, CLIP_MAX);
- 
-        /*clip[0].x = 0;
-        clip[0].y = 0;
-        clip[0].w = TILE_WIDTH;
-        clip[0].h = TILE_HEIGHT;*/
- 
-        /*clip[0].x = 16;
-        clip[0].y = 7;
-        clip[0].w = TILE_WIDTH;
-        clip[0].h = TILE_HEIGHT;*/
- 
-        /*clip[1].x = 0;
-        clip[1].y = 78;
-        clip[1].w = TILE_WIDTH;
-        clip[1].h = TILE_HEIGHT;
- 
-        clip[2].x = 0;
-        clip[2].y = 149;
-        clip[2].w = TILE_HEIGHT;
-        clip[2].h = TILE_HEIGHT;*/
+        generateClips(tileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
  
         int xOffset = 0;
         int yOffset = 0;
