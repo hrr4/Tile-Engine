@@ -18,7 +18,7 @@ const int TILE_HEIGHT = 16;
  
 const int CLIP_MAX = 128;
  
-int tileArray[70] = {
+int tileArray[CLIP_MAX] = {
         0,0,0,0,0,0,0,0,0,0,
         0,0,1,1,1,1,1,1,0,0,
         0,1,2,2,2,2,2,2,1,0,
@@ -39,6 +39,13 @@ std::string typeArray[CLIP_MAX] = {
         "b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
         "b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
         "b", "b", "b", "b", "b", "b", "b", "b", "b", "b"
+};
+
+// need this to associate types w/ clips = Tiles!
+
+struct Tile {
+	SDL_Rect* clip;
+	std::string type;
 };
 
 
@@ -90,6 +97,29 @@ void generateClips(SDL_Surface* _source, int _tileWidth, int _tileHeight, SDL_Re
                 }
         }
 }
+
+// Debating on whether or not to generate Clips + Types into Tiles in one func or not.
+// Thinking about keeping them seperate, can build a wrapper function if need be.... I guess
+
+void generateTiles(std::vector _tilesVec, std::string* _typeArray, SDL_Rect* clip) {
+        for (int i = 0; i < CLIP_MAX; ++i) {
+        	tempTile = new Tile;
+        	// Can i do this? Can't test. Would like to just copy the whole clip struct
+        	// Might be easier if possible.
+        	tempTile.clip = &clip;
+        	// / end ^
+        	// else ill have to do it member by member.
+        	tempTile.clip.x = clip[i].x;
+        	tempTile.clip.y = clip[i].y;
+                tempTile.clip.w = clip[i].w;
+                tempTile.clip.h = clip[i].h;
+                
+                tempTile.type = _typeArray[i];
+                
+                
+                _tilesVec.push_back(tempTile);
+        }
+}
  
 int main(int argc, char *argv[]) {
         bool quit = false;
@@ -98,13 +128,19 @@ int main(int argc, char *argv[]) {
                 return 1;
         }
         
-        std::vector<int> tilesVec(tileArray, tileArray + sizeof(tileArray) / sizeof(int));
+        // I should get rid of this clipping vector, and just read through the normal array.
+        // wasting space n shit.
+        std::vector<int> clipVec(tileArray, tileArray + sizeof(tileArray) / sizeof(int));
+        
+        std::vector<Tiles> tilesVec();
  
         screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE);
  
         tileset = loadImage("tileset16.png");
         
         generateClips(tileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
+        
+        generateTiles(tilesVec, &typeArray, clip);
  
         int xOffset = 0;
         int yOffset = 0;
