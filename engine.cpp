@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
         
         // I should get rid of this clipping vector, and just read through the normal array.
         // wasting space n shit.
-        std::vector<int> clipVec(tileArray, tileArray + sizeof(tileArray) / sizeof(int));
+        //std::vector<int> clipVec(tileArray, tileArray + sizeof(tileArray) / sizeof(int));
         
         std::vector<Tiles> tilesVec();
  
@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
                                         row_incr++;
                                 }
                                 for (int j = 0; j < ROOM_WIDTH; ++j) {
-                                        applySurface(xOffset, yOffset, tileset, screen, &clip[tilesVec[i+j+incr]]);
+                                        applySurface(xOffset, yOffset, tileset, screen, &clip[tileArray[j]]);
                                         xOffset += TILE_WIDTH;
                                 }
  
