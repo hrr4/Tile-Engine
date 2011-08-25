@@ -41,11 +41,24 @@ std::string typeArray[CLIP_MAX] = {
         "b", "b", "b", "b", "b", "b", "b", "b", "b", "b"
 };
 
+// 2 will be the default layer
+
+signed int layerArray[CLIP_MAX] = {
+	1,1,1,1,1,1,1,1,1,1
+        0,0,1,1,1,1,1,1,0,0,
+        0,1,2,2,2,2,2,2,1,0,
+        0,1,2,2,2,2,2,2,1,0,
+        0,1,2,2,2,2,2,2,1,0,
+        0,0,1,1,1,1,1,1,0,0,
+        0,0,0,0,0,0,0,0,0,0
+}
+
 // need this to associate types w/ clips = Tiles!
 
 struct Tile {
 	SDL_Rect* clip;
 	std::string type;
+	int layer;
 };
 
 
