@@ -56,7 +56,7 @@ signed int layerArray[CLIP_MAX] = {
 // need this to associate types w/ clips = Tiles!
 
 struct Tile {
-	SDL_Rect* clip;
+	SDL_Rect clip;
 	std::string type;
 	int layer;
 };
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
 								}
 								for (int j = 0; j < ROOM_WIDTH; ++j) {
 										//applySurface(xOffset, yOffset, tileset, screen, &clip[tileArray[i+incr+j]]);
-										applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
+										applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->cli);p
 										xOffset += TILE_WIDTH;
 								}
  
