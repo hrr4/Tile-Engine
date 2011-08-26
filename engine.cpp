@@ -3,6 +3,14 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+
+/* IDEAS still needing implemented:
+	Particle Effects - For lights n stuff
+	'Painting' different environments - Example: Painting with a grass brush on green tiles will make random
+	grass sprites n stuff.
+	Alpha Transparency - For stuff above other layers n such
+	
+*/
  
 
 // Constants
