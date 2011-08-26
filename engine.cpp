@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
  
- 
+
 // Constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
@@ -43,7 +43,7 @@ std::string typeArray[CLIP_MAX] = {
 
 // 2 will be the default layer
 
-signed int layerArray[CLIP_MAX] = {
+short signed int layerArray[CLIP_MAX] = {
 		1,1,1,1,1,1,1,1,1,1,
 		0,0,1,1,1,1,1,1,0,0,
 		0,1,2,2,2,2,2,2,1,0,
@@ -98,33 +98,29 @@ void applySurface(int x, int y, SDL_Surface* source, SDL_Surface* destination, S
 }
  
 void generateClips(SDL_Surface* _source, int _tileWidth, int _tileHeight, SDL_Rect* clip, int _clipMax) {
-		int incr = 0;
-		for (int i = 0; i < /*_source->h*/ 1; ++i) {
-				for (int j = 0; j < /*_source->w*/3; ++j) {
-						clip[(j+incr)].x = ((j+incr) * _tileWidth);
-						clip[(i+incr)].y = ((i+incr) * _tileHeight);
-						clip[(i+j+incr)].w = _tileWidth;
-						clip[(i+j+incr)].h = _tileHeight;
-						if (j >= _source->w)
-								incr = j;
-				}
+	int incr = 0;
+	for (int i = 0; i < /*_source->h*/ 1; ++i) {
+		for (int j = 0; j < /*_source->w*/3; ++j) {
+			clip[(j+incr)].x = ((j+incr) * _tileWidth);
+			clip[(i+incr)].y = ((i+incr) * _tileHeight);
+			clip[(i+j+incr)].w = _tileWidth;
+			clip[(i+j+incr)].h = _tileHeight;
+			if (j >= _source->w)
+				incr = j;
 		}
+	}
 }
 
 // Debating on whether or not to generate Clips + Types into Tiles in one func or not.
 // Thinking about keeping them separate, can build a wrapper function if need be.... I guess
 
-std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, std::string* _typeArray, SDL_Rect* _clip) {
+std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, std::string* _typeArray, int* _layerArray, SDL_Rect* _clip) {
 		for (int i = 0; i < CLIP_MAX; ++i) {
 			Tile* tempTile = new Tile;
 
-			tempTile->clip = _clip;
-			/*tempTile->clip->x = _clip->x;
-			tempTile->clip->y = _clip->y;
-			tempTile->clip->w = _clip->w;
-			tempTile->clip->h = _clip->h;*/
-
+			tempTile->clip = _clip[i];
 			tempTile->type = _typeArray[i];
+			tempTile->layer = _layerArray[i];
 				
 			_tilesVec.push_back(tempTile);
 
@@ -136,6 +132,7 @@ std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, std::string* _typ
  
 int main(int argc, char *argv[]) {
 		bool quit = false;
+		bool isFullscreen = false;
  
 		if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) {
 				return 1;
@@ -143,7 +140,7 @@ int main(int argc, char *argv[]) {
 		
 		std::vector<Tile*> tilesVec;
  
-		screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE);
+		screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE | SDL_RESIZABLE);
  
 		tileset = loadImage("tileset16.png");
 		
@@ -158,10 +155,22 @@ int main(int argc, char *argv[]) {
  
 		while (quit == false) {
 				while (SDL_PollEvent(&Event)) {
-						if (Event.type == SDL_QUIT) {
-								quit = true;
-						}
- 
+					switch(Event.type) {
+						case SDL_QUIT:
+							quit = true;
+							break;
+						case SDL_KEYDOWN:
+							switch (Event.key.keysym.sym) {
+								case SDLK_SPACE:
+									if (!isFullscreen) {
+										screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE | SDL_FULLSCREEN);
+									} else {
+										screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE | SDL_RESIZABLE);
+									}
+
+									break;
+							}
+					}
 						for (int i = 0; i < ROOM_HEIGHT; ++i) {
 								if (row_incr >= ROOM_HEIGHT) {
 										break;
@@ -170,7 +179,7 @@ int main(int argc, char *argv[]) {
 								}
 								for (int j = 0; j < ROOM_WIDTH; ++j) {
 										//applySurface(xOffset, yOffset, tileset, screen, &clip[tileArray[i+incr+j]]);
-										applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->cli);p
+										applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
 										xOffset += TILE_WIDTH;
 								}
  
@@ -180,7 +189,7 @@ int main(int argc, char *argv[]) {
 						}
 						xOffset = yOffset = 0;
 						if (SDL_Flip(screen) == -1)
-								return 1;
+							return 1;
 				}
 		}
 
