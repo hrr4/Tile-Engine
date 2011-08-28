@@ -11,6 +11,9 @@
 	grass sprites n stuff.
 	Alpha Transparency - For stuff above other layers n such
 	
+	On how to clip OpenGL Surfaces - Calculate tile width / pic width, tile height / pic height,
+		since glTexCoord's use percents. 
+	
 */
  
 
@@ -125,11 +128,7 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		optimizedImage = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, nextPowerOfTwo(loadedImage->w), 
 			nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask,
 			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
-		/*optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), 
-			nextPowerOfTwo(loadedImage->h), 32, 0x000000ff, 0x0000ff00, 0x00ff0000,  0xff000000);*/
 		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
-		//SDL_SetAlpha(optimizedImage, 0, 0);
-		//optimizedImage = SDL_DisplayFormatAlpha(loadedImage);
 		SDL_FreeSurface(loadedImage);
 	}
  
@@ -161,6 +160,8 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+	//glDeleteTextures(1, texture);
+
 	return optimizedImage;
 }
 
@@ -173,9 +174,12 @@ void Plane::Draw() {
 	// Build
 	glBegin(GL_QUADS);
 		glTexCoord2f(0, 0); glVertex2i(0, 0);
-		glTexCoord2f(1, 0); glVertex2i(SCREEN_WIDTH, 0);
+		/*glTexCoord2f(1, 0); glVertex2i(SCREEN_WIDTH, 0);
 		glTexCoord2f(1, 1); glVertex2i(SCREEN_WIDTH, SCREEN_HEIGHT);
-		glTexCoord2f(0, 1); glVertex2i(0, SCREEN_HEIGHT);
+		glTexCoord2f(0, 1); glVertex2i(0, SCREEN_HEIGHT);*/
+		glTexCoord2f(1, 0); glVertex2i(500, 0);
+		glTexCoord2f(1, 1); glVertex2i(500, 500);
+		glTexCoord2f(0, 1); glVertex2i(0, 500);
 	glEnd();
 	glFlush();
 
