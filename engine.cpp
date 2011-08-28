@@ -91,6 +91,7 @@ class Plane {
 public:
 	Plane();
 	SDL_Surface* Load(std::string _filename);
+	// Fix this: void generateClips( _source, int _tileWidth, int _tileHeight, SDL_Rect* clip, int _clipMax)
 	void Draw();
 	
 private:
@@ -125,7 +126,7 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	SDL_Surface* powerSurface = NULL;
 
 	if (loadedImage != NULL) {
-		optimizedImage = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, nextPowerOfTwo(loadedImage->w), 
+		optimizedImage = SDL_CreateRGBSurface(/*SDL_HWSURFACE | SDL_SRCALPHA*/NULL, nextPowerOfTwo(loadedImage->w), 
 			nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask,
 			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
 		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
@@ -171,15 +172,17 @@ void Plane::Draw() {
 
 	glBindTexture(GL_TEXTURE_2D, texture[0]);
 
+		glScaled(.5, .5, 1);
 	// Build
 	glBegin(GL_QUADS);
 		glTexCoord2f(0, 0); glVertex2i(0, 0);
 		/*glTexCoord2f(1, 0); glVertex2i(SCREEN_WIDTH, 0);
 		glTexCoord2f(1, 1); glVertex2i(SCREEN_WIDTH, SCREEN_HEIGHT);
 		glTexCoord2f(0, 1); glVertex2i(0, SCREEN_HEIGHT);*/
-		glTexCoord2f(1, 0); glVertex2i(500, 0);
-		glTexCoord2f(1, 1); glVertex2i(500, 500);
-		glTexCoord2f(0, 1); glVertex2i(0, 500);
+		// Simulating the actual level size, instead of tileset pic size.
+		glTexCoord2f(1, 0); glVertex2i(1000, 0);
+		glTexCoord2f(1, 1); glVertex2i(1000, 1000);
+		glTexCoord2f(0, 1); glVertex2i(0, 1000);
 	glEnd();
 	glFlush();
 
