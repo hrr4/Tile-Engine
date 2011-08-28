@@ -93,7 +93,9 @@ public:
 private:
 	int x, y;
 	SDL_Surface* pSurface;
-	GLuint texture[1];
+	GLuint texture[128];
+
+	int nextPowerOfTwo(int _num);
 };
 
 Plane::Plane() {
@@ -101,24 +103,59 @@ Plane::Plane() {
 	x = y = 0;
 }
 
+int Plane::nextPowerOfTwo(int _num) {
+	_num--;
+	_num = (_num >> 1) | _num;
+	_num = (_num >> 2) | _num;
+	_num = (_num >> 4) | _num;
+	_num = (_num >> 8) | _num;
+	_num = (_num >> 16) | _num;
+	_num++;
+	return _num;
+}
+
 SDL_Surface* Plane::Load(std::string _filename) {
+	GLint nOfColors;
+	GLenum texture_format;
 	SDL_Surface* loadedImage = IMG_Load(_filename.c_str());
 	SDL_Surface* optimizedImage = NULL;
+	SDL_Surface* powerSurface = NULL;
 
 	if (loadedImage != NULL) {
-			optimizedImage = SDL_DisplayFormat(loadedImage);
-			SDL_FreeSurface(loadedImage);
+		optimizedImage = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, nextPowerOfTwo(loadedImage->w), 
+			nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask,
+			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
+		/*optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), 
+			nextPowerOfTwo(loadedImage->h), 32, 0x000000ff, 0x0000ff00, 0x00ff0000,  0xff000000);*/
+		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
+		//SDL_SetAlpha(optimizedImage, 0, 0);
+		//optimizedImage = SDL_DisplayFormatAlpha(loadedImage);
+		SDL_FreeSurface(loadedImage);
 	}
  
 	if (optimizedImage != NULL) {
-			Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255);
-			SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
+			/*Uint32 colorkey = SDL_MapRGBA(optimizedImage->format, 255, 0, 255, 255);
+			SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);*/
+			//SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
+	}
+
+	nOfColors = optimizedImage->format->BytesPerPixel;
+	if (nOfColors == 4) {
+		if (optimizedImage->format->Rmask == 0x000000ff)
+			texture_format = GL_RGBA;
+		else
+			texture_format = GL_BGRA;
+	} else if (nOfColors == 3) {
+		if (optimizedImage->format->Rmask == 0x000000ff)
+			texture_format = GL_RGB;
+		else
+			texture_format = GL_BGR;
 	}
 
 	glGenTextures(1, &texture[0]);
 	glBindTexture(GL_TEXTURE_2D, texture[0]);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, optimizedImage->w, optimizedImage->h, 0, GL_RGB, 
+	glTexImage2D(GL_TEXTURE_2D, 0, nOfColors, optimizedImage->w, optimizedImage->h, 0, texture_format, 
 		GL_UNSIGNED_BYTE, optimizedImage->pixels);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -135,7 +172,6 @@ void Plane::Draw() {
 
 	// Build
 	glBegin(GL_QUADS);
-		glColor4i(1, 1, 1, 1);
 		glTexCoord2f(0, 0); glVertex2i(0, 0);
 		glTexCoord2f(1, 0); glVertex2i(SCREEN_WIDTH, 0);
 		glTexCoord2f(1, 1); glVertex2i(SCREEN_WIDTH, SCREEN_HEIGHT);
