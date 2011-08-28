@@ -1,5 +1,6 @@
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_opengl.h>
 #include <stdio.h>
 #include <string>
 #include <vector>
@@ -26,6 +27,15 @@ const int TILE_HEIGHT = 16;
  
 const int CLIP_MAX = 128;
  
+// SDL Shit
+ 
+SDL_Surface* screen = NULL;
+SDL_Surface* sTileset = NULL;
+ 
+SDL_Event Event;
+ 
+SDL_Rect clip[CLIP_MAX];
+
 int tileArray[CLIP_MAX] = {
 		0,0,0,0,0,0,0,0,0,0,
 		0,0,1,1,1,1,1,1,0,0,
@@ -64,20 +74,100 @@ short signed int layerArray[CLIP_MAX] = {
 // need this to associate types w/ clips = Tiles!
 
 struct Tile {
-	SDL_Rect clip;
+	SDL_Rect* clip;
 	std::string type;
 	int layer;
 };
 
+// Plane class
+// This is the plane we'll draw the tileset on
+// So eventually it'll need to be the size of the level
+// Not the size of the screen.
 
-// SDL Shit
+class Plane {
+public:
+	Plane();
+	SDL_Surface* Load(std::string _filename);
+	void Draw();
+	
+private:
+	int x, y;
+	SDL_Surface* pSurface;
+	GLuint texture[1];
+};
+
+Plane::Plane() {
+	pSurface = NULL;
+	x = y = 0;
+}
+
+SDL_Surface* Plane::Load(std::string _filename) {
+	SDL_Surface* loadedImage = IMG_Load(_filename.c_str());
+	SDL_Surface* optimizedImage = NULL;
+
+	if (loadedImage != NULL) {
+			optimizedImage = SDL_DisplayFormat(loadedImage);
+			SDL_FreeSurface(loadedImage);
+	}
  
-SDL_Surface* screen = NULL;
-SDL_Surface* tileset = NULL;
- 
-SDL_Event Event;
- 
-SDL_Rect clip[CLIP_MAX];
+	if (optimizedImage != NULL) {
+			Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255);
+			SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
+	}
+
+	glGenTextures(1, &texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[0]);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, optimizedImage->w, optimizedImage->h, 0, GL_RGB, 
+		GL_UNSIGNED_BYTE, optimizedImage->pixels);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	return optimizedImage;
+}
+
+void Plane::Draw() {
+	//Offset
+	glTranslatef(x, y, 0);
+
+	glBindTexture(GL_TEXTURE_2D, texture[0]);
+
+	// Build
+	glBegin(GL_QUADS);
+		glColor4i(1, 1, 1, 1);
+		glTexCoord2f(0, 0); glVertex2i(0, 0);
+		glTexCoord2f(1, 0); glVertex2i(SCREEN_WIDTH, 0);
+		glTexCoord2f(1, 1); glVertex2i(SCREEN_WIDTH, SCREEN_HEIGHT);
+		glTexCoord2f(0, 1); glVertex2i(0, SCREEN_HEIGHT);
+	glEnd();
+	glFlush();
+
+	//Reset
+	glLoadIdentity();
+}
+
+
+bool init_GL() {
+	glClearColor(0, 0, 0, 0);
+	glEnable(GL_TEXTURE_2D);
+
+	// Projection
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	//glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
+	// For debug, we're testing inside the screen for now
+	glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
+
+	// Model View
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	// Errors
+	if (glGetError() != GL_NO_ERROR)
+		return false;
+	return true;
+}
  
 SDL_Surface* loadImage(std::string fileName) {
 		SDL_Surface* loadedImage = IMG_Load(fileName.c_str());
@@ -122,11 +212,11 @@ void generateClips(SDL_Surface* _source, int _tileWidth, int _tileHeight, SDL_Re
 // Debating on whether or not to generate Clips + Types into Tiles in one func or not.
 // Thinking about keeping them separate, can build a wrapper function if need be.... I guess
 
-std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, std::string* _typeArray, int* _layerArray, SDL_Rect* _clip) {
+std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
 		for (int i = 0; i < CLIP_MAX; ++i) {
 			Tile* tempTile = new Tile;
 
-			tempTile->clip = _clip[i];
+			tempTile->clip = &_clip[_tileArray[i]];
 			tempTile->type = _typeArray[i];
 			tempTile->layer = _layerArray[i];
 				
@@ -139,74 +229,86 @@ std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, std::string* _typ
 }
  
 int main(int argc, char *argv[]) {
-		bool quit = false;
-		bool isFullscreen = false;
+	Plane tileset = Plane();
+	bool quit = false;
+	bool isFullscreen = false;
  
-		if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) {
-				return 1;
-		}
+	if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) {
+			return 1;
+	}
 		
-		std::vector<Tile*> tilesVec;
+	std::vector<Tile*> tilesVec;
  
-		screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE | SDL_RESIZABLE);
- 
-		tileset = loadImage("tileset16.png");
-		
-		generateClips(tileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
-		
-		tilesVec = generateTiles(tilesVec, typeArray, clip);
- 
-		int xOffset = 0;
-		int yOffset = 0;
-		int incr = 0;
-		int row_incr = 0;
- 
-		while (quit == false) {
-				while (SDL_PollEvent(&Event)) {
-					switch(Event.type) {
-						case SDL_QUIT:
-							quit = true;
-							break;
-						case SDL_KEYDOWN:
-							switch (Event.key.keysym.sym) {
-								case SDLK_SPACE:
-									if (!isFullscreen) {
-										screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE | SDL_FULLSCREEN);
-									} else {
-										screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE | SDL_RESIZABLE);
-									}
+	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE);
 
-									break;
-							}
-					}
-						for (int i = 0; i < ROOM_HEIGHT; ++i) {
-								if (row_incr >= ROOM_HEIGHT) {
-										break;
+	if (init_GL() == false)
+		return false;
+ 
+	//tileset = loadImage("tileset16.png");
+	tileset.Load("tileset16.png");
+		
+	//generateClips(sTileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
+		
+	tilesVec = generateTiles(tilesVec, tileArray, typeArray, layerArray, clip);
+ 
+	int xOffset = 0;
+	int yOffset = 0;
+	int incr = 0;
+	int row_incr = 0;
+ 
+	while (quit == false) {
+			while (SDL_PollEvent(&Event)) {
+				switch(Event.type) {
+					case SDL_QUIT:
+						quit = true;
+						break;
+					case SDL_KEYDOWN:
+						switch (Event.key.keysym.sym) {
+							case SDLK_SPACE:
+								if (!isFullscreen) {
+									screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_FULLSCREEN);
+									isFullscreen = true;
 								} else {
-										row_incr++;
+									screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE);
 								}
-								for (int j = 0; j < ROOM_WIDTH; ++j) {
-										//applySurface(xOffset, yOffset, tileset, screen, &clip[tileArray[i+incr+j]]);
-										applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
-										xOffset += TILE_WIDTH;
-								}
- 
-								xOffset = 0;
-								yOffset += TILE_HEIGHT;
-								incr += (ROOM_WIDTH-1);
-						}
-						xOffset = yOffset = 0;
-						if (SDL_Flip(screen) == -1)
-							return 1;
-				}
-		}
 
-		tilesVec.erase(tilesVec.begin(), tilesVec.end());
- 
-		SDL_FreeSurface(tileset);
-		SDL_FreeSurface(screen);
- 
-		SDL_Quit();
- 
-		exit(0);
+								break;
+
+							case SDLK_ESCAPE:
+								quit = true;
+								break;
+						}
+				}
+				for (int i = 0; i < ROOM_HEIGHT; ++i) {
+						if (row_incr >= ROOM_HEIGHT) {
+								break;
+						} else {
+								row_incr++;
+						}
+						for (int j = 0; j < ROOM_WIDTH; ++j) {
+								//applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
+								xOffset += TILE_WIDTH;
+						}
+
+						xOffset = 0;
+						yOffset += TILE_HEIGHT;
+						incr += (ROOM_WIDTH-1);
+				}
+				glClear(GL_COLOR_BUFFER_BIT);
+
+				tileset.Draw();
+
+				xOffset = yOffset = 0;
+				SDL_GL_SwapBuffers();
+		}
+	}
+
+	tilesVec.erase(tilesVec.begin(), tilesVec.end());
+
+	SDL_FreeSurface(sTileset);
+	SDL_FreeSurface(screen);
+
+	SDL_Quit();
+
+	exit(0);
 }
