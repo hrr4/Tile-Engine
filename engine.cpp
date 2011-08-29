@@ -6,14 +6,15 @@
 #include <vector>
 
 /* IDEAS still needing implemented:
-	Particle Effects - For lights n stuff
-	'Painting' different environments - Example: Painting with a grass brush on green tiles will make random
+	-Particle Effects - For lights n stuff
+	-'Painting' different environments - Example: Painting with a grass brush on green tiles will make random
 	grass sprites n stuff.
-	Alpha Transparency - For stuff above other layers n such
+	-Alpha Transparency - For stuff above other layers n such
 	
-	On how to clip OpenGL Surfaces - Calculate tile width / pic width, tile height / pic height,
+	-On how to clip OpenGL Surfaces - Calculate tile width / pic width, tile height / pic height,
 		since glTexCoord's use percents. 
-	
+		
+	-Instead of using an incremement variable, why dont i just increase by tile size in some of the loops?
 */
  
 
@@ -40,38 +41,38 @@ SDL_Event Event;
 SDL_Rect clip[CLIP_MAX];
 
 int tileArray[CLIP_MAX] = {
-		0,0,0,0,0,0,0,0,0,0,
-		0,0,1,1,1,1,1,1,0,0,
-		0,1,2,2,2,2,2,2,1,0,
-		0,1,2,2,2,2,2,2,1,0,
-		0,1,2,2,2,2,2,2,1,0,
-		0,0,1,1,1,1,1,1,0,0,
-		0,0,0,0,0,0,0,0,0,0
+	0,0,0,0,0,0,0,0,0,0,
+	0,0,1,1,1,1,1,1,0,0,
+	0,1,2,2,2,2,2,2,1,0,
+	0,1,2,2,2,2,2,2,1,0,
+	0,1,2,2,2,2,2,2,1,0,
+	0,0,1,1,1,1,1,1,0,0,
+	0,0,0,0,0,0,0,0,0,0
 };
  
 // u = unblock, b = block, w = water.
 // You can mix these together
  
 std::string typeArray[CLIP_MAX] = {
-		"b", "b", "b", "b", "b", "b", "b", "b", "b", "b",
-		"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
-		"b", "b", "uw", "uw",  "uw", "uw", "uw", "uw", "b", "b",
-		"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
-		"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
-		"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
-		"b", "b", "b", "b", "b", "b", "b", "b", "b", "b"
+	"b", "b", "b", "b", "b", "b", "b", "b", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "uw", "uw",  "uw", "uw", "uw", "uw", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "b", "b", "b", "b", "b", "b", "b", "b"
 };
 
 // 2 will be the default layer
 
 short signed int layerArray[CLIP_MAX] = {
-		1,1,1,1,1,1,1,1,1,1,
-		0,0,1,1,1,1,1,1,0,0,
-		0,1,2,2,2,2,2,2,1,0,
-		0,1,2,2,2,2,2,2,1,0,
-		0,1,2,2,2,2,2,2,1,0,
-		0,0,1,1,1,1,1,1,0,0,
-		0,0,0,0,0,0,0,0,0,0
+	1,1,1,1,1,1,1,1,1,1,
+	0,0,1,1,1,1,1,1,0,0,
+	0,1,2,2,2,2,2,2,1,0,
+	0,1,2,2,2,2,2,2,1,0,
+	0,1,2,2,2,2,2,2,1,0,
+	0,0,1,1,1,1,1,1,0,0,
+	0,0,0,0,0,0,0,0,0,0
 };
 
 // need this to associate types w/ clips = Tiles!
@@ -91,13 +92,15 @@ class Plane {
 public:
 	Plane();
 	SDL_Surface* Load(std::string _filename);
-	// Fix this: void generateClips( _source, int _tileWidth, int _tileHeight, SDL_Rect* clip, int _clipMax)
+	void generateClips(GLuint* _texture, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
+	std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
 	void Draw();
 	
 private:
 	int x, y;
 	SDL_Surface* pSurface;
-	GLuint texture[128];
+	GLuint texture[1];
+	std::vector<Tile*> tilesVec;
 
 	int nextPowerOfTwo(int _num);
 };
@@ -126,7 +129,7 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	SDL_Surface* powerSurface = NULL;
 
 	if (loadedImage != NULL) {
-		optimizedImage = SDL_CreateRGBSurface(/*SDL_HWSURFACE | SDL_SRCALPHA*/NULL, nextPowerOfTwo(loadedImage->w), 
+		optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), 
 			nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask,
 			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
 		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
@@ -159,11 +162,48 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		GL_UNSIGNED_BYTE, optimizedImage->pixels);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	//glDeleteTextures(1, texture);
 
 	return optimizedImage;
+}
+
+void Plane::generateClips(GLuint* _texture, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
+	GLuint* tempTexture = &_texture, texWidth = 0, texHeight = 0, incr = 0;
+	
+	for (int i = 0; i < (sizeof(_tempTexture) / sizeof(GLuint)); ++i) {
+		// Somehow get the texture width and height
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
+		for (int j = 0; j < texHeight; j++) {
+			for (int k = 0; k < texWidth; k++) {
+				clip[(k+incr)].x = ((k+incr) * _tileWidth);
+				clip[(j+incr)].y = ((j+incr) * _tileHeight);
+				clip[(k+j+incr)].w = _tileWidth;
+				clip[(k+j+incr)].h = _tileHeight;
+				if (k >= texWidth)
+					incr = k;
+			}
+		}
+	}
+}
+
+std::vector<Tile*> Plane::generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, 
+	short int* _layerArray, SDL_Rect* _clip) {
+		for (int i = 0; i < CLIP_MAX; ++i) {
+			Tile* tempTile = new Tile;
+
+			tempTile->clip = &_clip[_tileArray[i]];
+			tempTile->type = _typeArray[i];
+			tempTile->layer = _layerArray[i];
+				
+			_tilesVec.push_back(tempTile);
+
+			tempTile = NULL;
+		}
+
+		return _tilesVec;
 }
 
 void Plane::Draw() {
@@ -172,7 +212,8 @@ void Plane::Draw() {
 
 	glBindTexture(GL_TEXTURE_2D, texture[0]);
 
-		glScaled(.5, .5, 1);
+	glScaled(.5, .5, 1);
+	
 	// Build
 	glBegin(GL_QUADS);
 		glTexCoord2f(0, 0); glVertex2i(0, 0);
@@ -198,8 +239,7 @@ bool init_GL() {
 	// Projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	//glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
-	// For debug, we're testing inside the screen for now
+
 	glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
 
 	// Model View
@@ -213,72 +253,38 @@ bool init_GL() {
 }
  
 SDL_Surface* loadImage(std::string fileName) {
-		SDL_Surface* loadedImage = IMG_Load(fileName.c_str());
-		SDL_Surface* optimizedImage = NULL;
+	SDL_Surface* loadedImage = IMG_Load(fileName.c_str());
+	SDL_Surface* optimizedImage = NULL;
  
-		if (loadedImage != NULL) {
-				optimizedImage = SDL_DisplayFormat(loadedImage);
-				SDL_FreeSurface(loadedImage);
-		}
+	if (loadedImage != NULL) {
+		optimizedImage = SDL_DisplayFormat(loadedImage);
+		SDL_FreeSurface(loadedImage);
+	}
  
-		if (optimizedImage != NULL) {
-				Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255);
-				SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
-		}
+	if (optimizedImage != NULL) {
+		Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255);
+		SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
+	}
  
-		return optimizedImage;
+	return optimizedImage;
 }
  
 void applySurface(int x, int y, SDL_Surface* source, SDL_Surface* destination, SDL_Rect* clip = NULL) {
-		SDL_Rect offset;
+	SDL_Rect offset;
  
-		offset.x = x;
-		offset.y = y;
+	offset.x = x;
+	offset.y = y;
  
-		SDL_BlitSurface(source, clip, destination, &offset);
-}
- 
-void generateClips(SDL_Surface* _source, int _tileWidth, int _tileHeight, SDL_Rect* clip, int _clipMax) {
-	int incr = 0;
-	for (int i = 0; i < /*_source->h*/ 1; ++i) {
-		for (int j = 0; j < /*_source->w*/3; ++j) {
-			clip[(j+incr)].x = ((j+incr) * _tileWidth);
-			clip[(i+incr)].y = ((i+incr) * _tileHeight);
-			clip[(i+j+incr)].w = _tileWidth;
-			clip[(i+j+incr)].h = _tileHeight;
-			if (j >= _source->w)
-				incr = j;
-		}
-	}
+	SDL_BlitSurface(source, clip, destination, &offset);
 }
 
-// Debating on whether or not to generate Clips + Types into Tiles in one func or not.
-// Thinking about keeping them separate, can build a wrapper function if need be.... I guess
-
-std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
-		for (int i = 0; i < CLIP_MAX; ++i) {
-			Tile* tempTile = new Tile;
-
-			tempTile->clip = &_clip[_tileArray[i]];
-			tempTile->type = _typeArray[i];
-			tempTile->layer = _layerArray[i];
-				
-			_tilesVec.push_back(tempTile);
-
-			tempTile = NULL;
-		}
-
-		return _tilesVec;
-}
  
 int main(int argc, char *argv[]) {
 	Plane tileset = Plane();
-	bool quit = false;
-	bool isFullscreen = false;
+	bool quit = false, isFullscreen = false;
  
-	if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) {
-			return 1;
-	}
+	if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) 
+		return true;
 		
 	std::vector<Tile*> tilesVec;
  
@@ -287,8 +293,9 @@ int main(int argc, char *argv[]) {
 	if (init_GL() == false)
 		return false;
  
-	//tileset = loadImage("tileset16.png");
 	tileset.Load("tileset16.png");
+	
+	tileset.generateClips(GLuint* _texture, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX)
 		
 	//generateClips(sTileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 		
@@ -300,49 +307,48 @@ int main(int argc, char *argv[]) {
 	int row_incr = 0;
  
 	while (quit == false) {
-			while (SDL_PollEvent(&Event)) {
-				switch(Event.type) {
-					case SDL_QUIT:
-						quit = true;
-						break;
-					case SDL_KEYDOWN:
-						switch (Event.key.keysym.sym) {
-							case SDLK_SPACE:
-								if (!isFullscreen) {
-									screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_FULLSCREEN);
-									isFullscreen = true;
-								} else {
-									screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE);
-								}
+		while (SDL_PollEvent(&Event)) {
+			switch(Event.type) {
+				case SDL_QUIT:
+					quit = true;
+					break;
+				case SDL_KEYDOWN:
+					switch (Event.key.keysym.sym) {
+						case SDLK_SPACE:
+							if (!isFullscreen) {
+								screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_FULLSCREEN);						
+								isFullscreen = true;
+							} else {
+								screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE);
+							}
+							break;
 
-								break;
-
-							case SDLK_ESCAPE:
-								quit = true;
-								break;
-						}
+						case SDLK_ESCAPE:
+							quit = true;
+							break;
+					}
+			}
+			for (int i = 0; i < ROOM_HEIGHT; ++i) {
+				if (row_incr >= ROOM_HEIGHT) {
+					break;
+				} else {
+					row_incr++;
 				}
-				for (int i = 0; i < ROOM_HEIGHT; ++i) {
-						if (row_incr >= ROOM_HEIGHT) {
-								break;
-						} else {
-								row_incr++;
-						}
-						for (int j = 0; j < ROOM_WIDTH; ++j) {
-								//applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
-								xOffset += TILE_WIDTH;
-						}
-
-						xOffset = 0;
-						yOffset += TILE_HEIGHT;
-						incr += (ROOM_WIDTH-1);
+				for (int j = 0; j < ROOM_WIDTH; ++j) {
+					//applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
+					xOffset += TILE_WIDTH;
 				}
-				glClear(GL_COLOR_BUFFER_BIT);
 
-				tileset.Draw();
+				xOffset = 0;
+				yOffset += TILE_HEIGHT;
+				incr += (ROOM_WIDTH-1);
+			}
+			glClear(GL_COLOR_BUFFER_BIT);
 
-				xOffset = yOffset = 0;
-				SDL_GL_SwapBuffers();
+			tileset.Draw();
+
+			xOffset = yOffset = 0;
+			SDL_GL_SwapBuffers();
 		}
 	}
 
