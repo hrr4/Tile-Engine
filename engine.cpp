@@ -174,12 +174,12 @@ SDL_Surface* Plane::Load(std::string _filename) {
 
 void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
 	GLint texWidth[1], texHeight[1]; 
-	int incr = 0;
+	int incr = 0, xOffset = 0, yOffset = 0, row_incr = 0;;
 	
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
 
-	int testH = texHeight[0] / _tileHeight;
+/*	int testH = texHeight[0] / _tileHeight;
 	int testW = texWidth[0] / _tileWidth;
 
 	for (int j = 0; j <= testH; ++j) {
@@ -191,7 +191,25 @@ void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_R
 			if (k >= testW)
 				incr = k+1;
 		}
+	}*/
+	for (int i = 0; i < ROOM_HEIGHT; ++i) {
+		if (row_incr >= ROOM_HEIGHT) {
+			break;
+		} else {
+			row_incr++;
+		}
+		for (int j = 0; j < ROOM_WIDTH; ++j) {
+			//applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
+			//
+			xOffset += TILE_WIDTH;
+		}
+
+		xOffset = 0;
+		yOffset += TILE_HEIGHT;
+		incr += (ROOM_WIDTH-1);
 	}
+
+	xOffset = yOffset = 0;
 }
 
 std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, 
