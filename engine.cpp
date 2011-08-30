@@ -30,11 +30,10 @@ const int TILE_WIDTH = 16;
 const int TILE_HEIGHT = 16;
  
 const int CLIP_MAX = 128;
- 
+
 // SDL Shit
  
 SDL_Surface* screen = NULL;
-SDL_Surface* sTileset = NULL;
  
 SDL_Event Event;
  
@@ -92,8 +91,8 @@ class Plane {
 public:
 	Plane();
 	SDL_Surface* Load(std::string _filename);
-	void generateClips(GLuint* _texture, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
-	std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
+	void generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
+	std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
 	void Draw();
 	
 private:
@@ -164,29 +163,36 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	//glDeleteTextures(1, texture);
+	//glDeleteTextures(1, &texture[0]);
 
 	return optimizedImage;
 }
 
-void Plane::generateClips(GLuint* _texture, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
-	GLuint* tempTexture = &_texture, texWidth = 0, texHeight = 0, incr = 0;
+void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
+	GLint texWidth[1], texHeight[1]; 
+	int incr = 0;
 	
-	for (int i = 0; i < (sizeof(_tempTexture) / sizeof(GLuint)); ++i) {
-		// Somehow get the texture width and height
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
-		for (int j = 0; j < texHeight; j++) {
-			for (int k = 0; k < texWidth; k++) {
-				clip[(k+incr)].x = ((k+incr) * _tileWidth);
-				clip[(j+incr)].y = ((j+incr) * _tileHeight);
-				clip[(k+j+incr)].w = _tileWidth;
-				clip[(k+j+incr)].h = _tileHeight;
-				if (k >= texWidth)
-					incr = k;
-			}
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
+
+	for (int j = 0; j < texHeight[0]; j++) {
+		for (int k = 0; k < texWidth[0]; k++) {
+			clip[(k+incr)].x = ((k+incr) * _tileWidth);
+			clip[(j+incr)].y = ((j+incr) * _tileHeight);
+			clip[(k+j+incr)].w = _tileWidth;
+			clip[(k+j+incr)].h = _tileHeight;
+			if (k >= texWidth[0])
+				incr = k;
 		}
 	}
+	/*for (int i = 0; i < texHeight[0]; i+=_tileHeight) {
+		for (int j = 0; j < texWidth[0]; j+=_tileWidth) {
+			clip[j].x = (j * _tileWidth);
+			clip[i].y = (i * _tileHeight);
+			clip[i+j].w = _tileWidth;
+			clip[i+j].w = _tileHeight;
+		}
+	}*/
 }
 
 std::vector<Tile*> Plane::generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, 
@@ -197,7 +203,7 @@ std::vector<Tile*> Plane::generateTiles(std::vector<Tile*> _tilesVec, int* _tile
 			tempTile->clip = &_clip[_tileArray[i]];
 			tempTile->type = _typeArray[i];
 			tempTile->layer = _layerArray[i];
-				
+
 			_tilesVec.push_back(tempTile);
 
 			tempTile = NULL;
@@ -210,17 +216,11 @@ void Plane::Draw() {
 	//Offset
 	glTranslatef(x, y, 0);
 
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
-
 	glScaled(.5, .5, 1);
 	
 	// Build
 	glBegin(GL_QUADS);
 		glTexCoord2f(0, 0); glVertex2i(0, 0);
-		/*glTexCoord2f(1, 0); glVertex2i(SCREEN_WIDTH, 0);
-		glTexCoord2f(1, 1); glVertex2i(SCREEN_WIDTH, SCREEN_HEIGHT);
-		glTexCoord2f(0, 1); glVertex2i(0, SCREEN_HEIGHT);*/
-		// Simulating the actual level size, instead of tileset pic size.
 		glTexCoord2f(1, 0); glVertex2i(1000, 0);
 		glTexCoord2f(1, 1); glVertex2i(1000, 1000);
 		glTexCoord2f(0, 1); glVertex2i(0, 1000);
@@ -295,11 +295,11 @@ int main(int argc, char *argv[]) {
  
 	tileset.Load("tileset16.png");
 	
-	tileset.generateClips(GLuint* _texture, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX)
+	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 		
 	//generateClips(sTileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 		
-	tilesVec = generateTiles(tilesVec, tileArray, typeArray, layerArray, clip);
+	//tilesVec = generateTiles(tilesVec, tileArray, typeArray, layerArray, clip);
  
 	int xOffset = 0;
 	int yOffset = 0;
@@ -354,7 +354,6 @@ int main(int argc, char *argv[]) {
 
 	tilesVec.erase(tilesVec.begin(), tilesVec.end());
 
-	SDL_FreeSurface(sTileset);
 	SDL_FreeSurface(screen);
 
 	SDL_Quit();
