@@ -29,7 +29,7 @@ const int ROOM_HEIGHT = 7;
 const int TILE_WIDTH = 16;
 const int TILE_HEIGHT = 16;
  
-const int CLIP_MAX = 500;
+const int CLIP_MAX = 600;
 
 // SDL Shit
  
@@ -92,7 +92,8 @@ public:
 	Plane();
 	SDL_Surface* Load(std::string _filename);
 	void generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
-	std::vector<Tile*> generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
+	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
+	void assembleMap(std::vector<Tile*> _tilesVec);
 	void Draw();
 	
 private:
@@ -178,14 +179,17 @@ void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_R
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
 
-	for (int j = 0; j < texHeight[0]; ++j) {
-		for (int k = 0; k < texWidth[0]; ++k) {
+	int testH = texHeight[0] / _tileHeight;
+	int testW = texWidth[0] / _tileWidth;
+
+	for (int j = 0; j <= testH; ++j) {
+		for (int k = 0; k <= testW; ++k) {
 			clip[(k+incr)].x = ((k+incr) * _tileWidth);
 			clip[(j+incr)].y = ((j+incr) * _tileHeight);
 			clip[(k+j+incr)].w = _tileWidth;
 			clip[(k+j+incr)].h = _tileHeight;
-			if (k >= texWidth[0])
-				incr = k;
+			if (k >= testW)
+				incr = k+1;
 		}
 	}
 }
@@ -195,18 +199,20 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 		
 		std::vector<Tile*> tempVec;
 
+		Tile* tempTile;
+
 		for (int i = 0; i < CLIP_MAX; ++i) {
-			Tile* tempTile = new Tile;
+			tempTile = new Tile;
 			
 			tempTile->clip = &_clip[_tileArray[i]];
 			tempTile->type = _typeArray[i];
 			tempTile->layer = _layerArray[i];
 
-			_tilesVec.push_back(tempTile);
+			tempVec.push_back(tempTile);
 
 		}
-		
 		tempTile = NULL;
+		delete tempTile;
 		
 		return tempVec;
 }
