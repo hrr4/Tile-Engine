@@ -14,7 +14,7 @@
 	-On how to clip OpenGL Surfaces - Calculate tile width / pic width, tile height / pic height,
 		since glTexCoord's use percents. 
 		
-	-Instead of using an incremement variable, why dont i just increase by tile size in some of the loops?
+	- A way to get this to draw, is to assemble the tiles on a newly created RGB SDL Surface and blit that
 */
  
 
@@ -29,7 +29,7 @@ const int ROOM_HEIGHT = 7;
 const int TILE_WIDTH = 16;
 const int TILE_HEIGHT = 16;
  
-const int CLIP_MAX = 128;
+const int CLIP_MAX = 500;
 
 // SDL Shit
  
@@ -55,7 +55,7 @@ int tileArray[CLIP_MAX] = {
 std::string typeArray[CLIP_MAX] = {
 	"b", "b", "b", "b", "b", "b", "b", "b", "b", "b",
 	"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
-	"b", "b", "uw", "uw",  "uw", "uw", "uw", "uw", "b", "b",
+	"b", "b", "uw", "uw", "uw", "uw", "uw", "uw", "b", "b",
 	"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
 	"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
 	"b", "b", "u", "u", "u", "u", "u", "u", "b", "b",
@@ -131,6 +131,8 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), 
 			nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask,
 			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
+		// Only blitting to test out functionality for now. Will have to blit the rebuilt
+		// tilemap when i get it goin.
 		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
 		SDL_FreeSurface(loadedImage);
 	}
@@ -142,6 +144,7 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	}
 
 	nOfColors = optimizedImage->format->BytesPerPixel;
+	
 	if (nOfColors == 4) {
 		if (optimizedImage->format->Rmask == 0x000000ff)
 			texture_format = GL_RGBA;
@@ -175,8 +178,8 @@ void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_R
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
 
-	for (int j = 0; j < texHeight[0]; j++) {
-		for (int k = 0; k < texWidth[0]; k++) {
+	for (int j = 0; j < texHeight[0]; ++j) {
+		for (int k = 0; k < texWidth[0]; ++k) {
 			clip[(k+incr)].x = ((k+incr) * _tileWidth);
 			clip[(j+incr)].y = ((j+incr) * _tileHeight);
 			clip[(k+j+incr)].w = _tileWidth;
@@ -185,31 +188,33 @@ void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_R
 				incr = k;
 		}
 	}
-	/*for (int i = 0; i < texHeight[0]; i+=_tileHeight) {
-		for (int j = 0; j < texWidth[0]; j+=_tileWidth) {
-			clip[j].x = (j * _tileWidth);
-			clip[i].y = (i * _tileHeight);
-			clip[i+j].w = _tileWidth;
-			clip[i+j].w = _tileHeight;
-		}
-	}*/
 }
 
-std::vector<Tile*> Plane::generateTiles(std::vector<Tile*> _tilesVec, int* _tileArray, std::string* _typeArray, 
-	short int* _layerArray, SDL_Rect* _clip) {
+std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, 
+	SDL_Rect* _clip) {
+		
+		std::vector<Tile*> tempVec;
+
 		for (int i = 0; i < CLIP_MAX; ++i) {
 			Tile* tempTile = new Tile;
-
+			
 			tempTile->clip = &_clip[_tileArray[i]];
 			tempTile->type = _typeArray[i];
 			tempTile->layer = _layerArray[i];
 
 			_tilesVec.push_back(tempTile);
 
-			tempTile = NULL;
 		}
+		
+		tempTile = NULL;
+		
+		return tempVec;
+}
 
-		return _tilesVec;
+// Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
+
+void Plane::assembleMap(std::vector<Tile*> _tilesVec) {
+	
 }
 
 void Plane::Draw() {
@@ -217,6 +222,8 @@ void Plane::Draw() {
 	glTranslatef(x, y, 0);
 
 	glScaled(.5, .5, 1);
+	
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	
 	// Build
 	glBegin(GL_QUADS);
@@ -251,7 +258,7 @@ bool init_GL() {
 		return false;
 	return true;
 }
- 
+
 SDL_Surface* loadImage(std::string fileName) {
 	SDL_Surface* loadedImage = IMG_Load(fileName.c_str());
 	SDL_Surface* optimizedImage = NULL;
@@ -260,7 +267,7 @@ SDL_Surface* loadImage(std::string fileName) {
 		optimizedImage = SDL_DisplayFormat(loadedImage);
 		SDL_FreeSurface(loadedImage);
 	}
- 
+
 	if (optimizedImage != NULL) {
 		Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255);
 		SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
@@ -296,6 +303,8 @@ int main(int argc, char *argv[]) {
 	tileset.Load("tileset16.png");
 	
 	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
+	
+	tilesVec = tileset.generateTiles(tileArray, typeArray, layerArray, clip);
 		
 	//generateClips(sTileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 		
@@ -336,6 +345,7 @@ int main(int argc, char *argv[]) {
 				}
 				for (int j = 0; j < ROOM_WIDTH; ++j) {
 					//applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
+					//
 					xOffset += TILE_WIDTH;
 				}
 
