@@ -94,8 +94,8 @@ public:
 	/*SDL_Surface**/void Load(std::string _filename);
 	void generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
-	SDL_Surface* assembleMap(std::vector<Tile*> _tilesVec);
-	void Draw();
+	SDL_Surface* assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip);
+	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination);
 	
 private:
 	int x, y;
@@ -175,28 +175,23 @@ int Plane::nextPowerOfTwo(int _num) {
 
 void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
 	GLint texWidth[1], texHeight[1]; 
-	//int incr = 0;
+	int rowIncr = 0;
 	
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
 
-	//int testH = texHeight[0] / _tileHeight;
-	//int testW = texWidth[0] / _tileWidth;
+	int testH = texHeight[0] / _tileHeight;
+	int testW = texWidth[0] / _tileWidth;
 	
 
-	for (int j = 0; j <= /*testH*/texHeight; ++j) {
-		for (int k = 0; k <= /*testW*/texWidth; ++k) {
-			/*clip[(k+incr)].x = ((k+incr) * _tileWidth);
-			clip[(j+incr)].y = ((j+incr) * _tileHeight);
-			clip[(k+j+incr)].w = _tileWidth;
-			clip[(k+j+incr)].h = _tileHeight;*/
-			clip[(j*texWidth+i)].x = ((j*texWidth+i) * _tileWidth);
-			clip[(j*texWidth+i)].y = ((j*texWidth+i) * _tileHeight);
-			clip[(j*texWidth+i)].w = _tileWidth;
-			clip[(j*texWidth+i)].h = _tileHeight;
-			/*if (k >= testW)
-				incr = k+1;*/
+for (GLint i = 0; i <= ROOM_HEIGHT; ++i) {
+		for (GLint j = 0; j <= ROOM_WIDTH; ++j) {
+			clip[j+rowIncr].x = ((j+rowIncr) * _tileWidth);
+			clip[j*i].y = ((j*i) * _tileHeight);
+			clip[j+rowIncr].w = _tileWidth;
+			clip[j+rowIncr].h = _tileHeight;
 		}
+		rowIncr+=ROOM_WIDTH;
 	}
 }
 
@@ -210,9 +205,9 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 		for (int i = 0; i < CLIP_MAX; ++i) {
 			tempTile = new Tile;
 			
-			tempTile->clip = &_clip[_tileArray[i][]];
-			tempTile->type = _typeArray[i][];
-			tempTile->layer = _layerArray[i][];
+			tempTile->clip = &_clip[_tileArray[i]];
+			tempTile->type = _typeArray[i];
+			tempTile->layer = _layerArray[i];
 
 			tempVec.push_back(tempTile);
 
@@ -229,10 +224,10 @@ SDL_Surface* Plane::assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip)  
 	SDL_Surface* tempSurface = NULL;
 	
 	// Gonna try to use an iterator to get through the tiles, instead of copying info to dummy tile.
-	for (std::vector<Tile*>::const_iterator iter = _tilesVec.begin(); iter != _tilesVec.size(); ++iter) {
+	for (std::vector<Tile*>::const_iterator iter = _tilesVec.begin(); iter != _tilesVec.end(); ++iter) {
 	
-		tempSurface = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(*iter->clip->w), 
-			nextPowerOfTwo(*iter->clip->h), 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+		tempSurface = SDL_CreateRGBSurface(NULL, nextPowerOfTwo((*iter)->clip->w), 
+			nextPowerOfTwo((*iter)->clip->h), 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
 			
 	}
 	
@@ -241,10 +236,10 @@ SDL_Surface* Plane::assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip)  
 
 void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination) {
 	
-	SDL_Rect* offset;
+	SDL_Rect offset;
 	offset.x = 0; offset.y = 0;
 	
-	SDL_BlitSurface(_blitSurface, NULL, _blitDestination, &offset);
+	SDL_BlitSurface(_blitSource, NULL, _blitDestination, &offset);
 	
 	//Offset
 	glTranslatef(x, y, 0);
@@ -314,9 +309,9 @@ int main(int argc, char *argv[]) {
 	
 	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 	
-	std::vector<Tile*> tilesVec = tileset.generateTiles(tileArray, typeArray, layerArray, clip);
+	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
 	
-	tileMap = tileset.assembleMap(tilesVec);
+	tileMap = tileset.assembleMap(tilesVec, clip);
 		
 	//generateClips(sTileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 		
@@ -379,7 +374,7 @@ int main(int argc, char *argv[]) {
 			}*/
 			glClear(GL_COLOR_BUFFER_BIT);
 
-			tileset.Draw(tileMap);
+			tileset.Draw(tileMap, screen);
 
 			//xOffset = yOffset = 0;
 			SDL_GL_SwapBuffers();
