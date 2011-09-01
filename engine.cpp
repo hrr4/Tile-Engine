@@ -90,8 +90,8 @@ struct Tile {
 
 class Plane {
 public:
-	Plane();
-	/*SDL_Surface**/void Load(std::string _filename);
+	Plane(): pSurface(NULL), x(0), y(0);
+	void Load(std::string _filename);
 	void generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
 	SDL_Surface* assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip);
@@ -106,11 +106,6 @@ private:
 	int nextPowerOfTwo(int _num);
 };
 
-Plane::Plane() {
-	pSurface = NULL;
-	x = y = 0;
-}
-
 int Plane::nextPowerOfTwo(int _num) {
 	_num--;
 	_num = (_num >> 1) | _num;
@@ -122,7 +117,7 @@ int Plane::nextPowerOfTwo(int _num) {
 	return _num;
 }
 
-/*SDL_Surface**/void Plane::Load(std::string _filename) {
+void Plane::Load(std::string _filename) {
 	GLint nOfColors;
 	GLenum texture_format;
 	SDL_Surface* loadedImage = IMG_Load(_filename.c_str());
@@ -169,8 +164,6 @@ int Plane::nextPowerOfTwo(int _num) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	//glDeleteTextures(1, &texture[0]);
-
-	//return optimizedImage;
 }
 
 void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
@@ -180,11 +173,11 @@ void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_R
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
 
-	int testH = texHeight[0] / _tileHeight;
-	int testW = texWidth[0] / _tileWidth;
+	/*int testH = texHeight[0] / _tileHeight;
+	int testW = texWidth[0] / _tileWidth;*/
 	
 
-for (GLint i = 0; i <= ROOM_HEIGHT; ++i) {
+	/*for (GLint i = 0; i <= ROOM_HEIGHT; ++i) {
 		for (GLint j = 0; j <= ROOM_WIDTH; ++j) {
 			clip[j+rowIncr].x = ((j+rowIncr) * _tileWidth);
 			clip[j*i].y = ((j*i) * _tileHeight);
@@ -192,6 +185,15 @@ for (GLint i = 0; i <= ROOM_HEIGHT; ++i) {
 			clip[j+rowIncr].h = _tileHeight;
 		}
 		rowIncr+=ROOM_WIDTH;
+	}*/
+	
+	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+		clip[i+rowIncr].x = ((i+rowIncr) * _tileWidth);
+		clip[i+rowIncr].y = ((i+rowIncr) * _tileHeight);
+		clip[i+rowIncr].w = _tileWidth;
+		clip[i+rowIncr].h = _tileHeight;
+		if (i >= ROOM_WIDTH)
+			rowIncr+=(j+1);
 	}
 }
 
@@ -224,6 +226,8 @@ SDL_Surface* Plane::assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip)  
 	SDL_Surface* tempSurface = NULL;
 	
 	// Gonna try to use an iterator to get through the tiles, instead of copying info to dummy tile.
+	// need to fix this, it is making a surface out of each clip, which is wrong.
+	// this will just draw the last clip
 	for (std::vector<Tile*>::const_iterator iter = _tilesVec.begin(); iter != _tilesVec.end(); ++iter) {
 	
 		tempSurface = SDL_CreateRGBSurface(NULL, nextPowerOfTwo((*iter)->clip->w), 
