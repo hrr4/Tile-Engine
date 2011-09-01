@@ -1,7 +1,6 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_opengl.h>
-#include <stdio.h>
 #include <string>
 #include <vector>
 
@@ -230,7 +229,7 @@ SDL_Surface* Plane::assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip)  
 	// this will just draw the last clip
 	for (std::vector<Tile*>::const_iterator iter = _tilesVec.begin(); iter != _tilesVec.end(); ++iter) {
 	
-		tempSurface = SDL_CreateRGBSurface(NULL, nextPowerOfTwo((*iter)->clip->w), 
+		tempSurface += SDL_CreateRGBSurface(NULL, nextPowerOfTwo((*iter)->clip->w), 
 			nextPowerOfTwo((*iter)->clip->h), 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
 			
 	}
