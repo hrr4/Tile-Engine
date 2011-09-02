@@ -89,13 +89,13 @@ struct Tile {
 
 class Plane {
 public:
-	Plane(): pSurface(NULL), x(0), y(0);
+	Plane() : pSurface(NULL), x(0), y(0) {};
 	void Load(std::string _filename);
 	void generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
 	SDL_Surface* assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip);
 	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination);
-	
+
 private:
 	int x, y;
 	SDL_Surface* pSurface;
@@ -140,7 +140,7 @@ void Plane::Load(std::string _filename) {
 	}
 
 	nOfColors = optimizedImage->format->BytesPerPixel;
-	
+
 	if (nOfColors == 4) {
 		if (optimizedImage->format->Rmask == 0x000000ff)
 			texture_format = GL_RGBA;
@@ -167,14 +167,14 @@ void Plane::Load(std::string _filename) {
 
 void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
 	GLint texWidth[1], texHeight[1]; 
-	int rowIncr = 0;
-	
+	int Incr = 0, row = 0, test = 1;
+
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
 
 	/*int testH = texHeight[0] / _tileHeight;
 	int testW = texWidth[0] / _tileWidth;*/
-	
+
 
 	/*for (GLint i = 0; i <= ROOM_HEIGHT; ++i) {
 		for (GLint j = 0; j <= ROOM_WIDTH; ++j) {
@@ -185,27 +185,31 @@ void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_R
 		}
 		rowIncr+=ROOM_WIDTH;
 	}*/
-	
+
 	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		clip[i+rowIncr].x = ((i+rowIncr) * _tileWidth);
-		clip[i+rowIncr].y = ((i+rowIncr) * _tileHeight);
-		clip[i+rowIncr].w = _tileWidth;
-		clip[i+rowIncr].h = _tileHeight;
-		if (i >= ROOM_WIDTH)
-			rowIncr+=(j+1);
+		clip[test+Incr].x = ((test+Incr) * _tileWidth);
+		clip[test+Incr].y = (row * _tileHeight);
+		clip[test+Incr].w = _tileWidth;
+		clip[test+Incr].h = _tileHeight;
+		if (test >= ROOM_WIDTH) {
+			row++;
+			Incr+=test;
+			test = 0;
+		}	
+		test++;
 	}
 }
 
 std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, 
 	SDL_Rect* _clip) {
-		
+
 		std::vector<Tile*> tempVec;
 
 		Tile* tempTile;
 
 		for (int i = 0; i < CLIP_MAX; ++i) {
 			tempTile = new Tile;
-			
+
 			tempTile->clip = &_clip[_tileArray[i]];
 			tempTile->type = _typeArray[i];
 			tempTile->layer = _layerArray[i];
@@ -215,7 +219,7 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 		}
 		tempTile = NULL;
 		delete tempTile;
-		
+
 		return tempVec;
 }
 
@@ -223,34 +227,34 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 
 SDL_Surface* Plane::assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip)  {
 	SDL_Surface* tempSurface = NULL;
-	
+
 	// Gonna try to use an iterator to get through the tiles, instead of copying info to dummy tile.
 	// need to fix this, it is making a surface out of each clip, which is wrong.
 	// this will just draw the last clip
 	for (std::vector<Tile*>::const_iterator iter = _tilesVec.begin(); iter != _tilesVec.end(); ++iter) {
-	
-		tempSurface += SDL_CreateRGBSurface(NULL, nextPowerOfTwo((*iter)->clip->w), 
+
+		tempSurface = SDL_CreateRGBSurface(NULL, nextPowerOfTwo((*iter)->clip->w), 
 			nextPowerOfTwo((*iter)->clip->h), 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-			
+
 	}
-	
+
 	return tempSurface;
 }
 
 void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination) {
-	
+
 	SDL_Rect offset;
 	offset.x = 0; offset.y = 0;
-	
+
 	SDL_BlitSurface(_blitSource, NULL, _blitDestination, &offset);
-	
+
 	//Offset
 	glTranslatef(x, y, 0);
 
 	glScaled(.5, .5, 1);
-	
+
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	
+
 	// Build
 	glBegin(GL_QUADS);
 		glTexCoord2f(0, 0); glVertex2i(0, 0);
@@ -300,7 +304,7 @@ int main(int argc, char *argv[]) {
  
 	if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) 
 		return true;
-		
+
 	//std::vector<Tile*> tilesVec;
  
 	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE);
@@ -309,15 +313,15 @@ int main(int argc, char *argv[]) {
 		return false;
  
 	tileset.Load("tileset16.png");
-	
+
 	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
-	
+
 	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
-	
+
 	tileMap = tileset.assembleMap(tilesVec, clip);
-		
+
 	//generateClips(sTileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
-		
+
 	//tilesVec = generateTiles(tilesVec, tileArray, typeArray, layerArray, clip);
  
 	/*int xOffset = 0;
@@ -347,11 +351,11 @@ int main(int argc, char *argv[]) {
 							break;
 					}
 			}
-			
+
 			// Fix this to use 2D Array
 			// Do i even need to do any of these loops?
 			// Draw should be able to do everything needed, after assembledMap.
-			
+
 			/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
 				if (row_incr >= ROOM_HEIGHT) {
 					break;
@@ -368,7 +372,7 @@ int main(int argc, char *argv[]) {
 				yOffset += TILE_HEIGHT;
 				incr += (ROOM_WIDTH-1);
 			}*/
-			
+
 			/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
 				for (int j = 0; j < ROOM_WIDTH; ++j) {
 					//Use 2d Array here:
