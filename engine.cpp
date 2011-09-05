@@ -1,6 +1,8 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_opengl.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
 #include <string>
 #include <vector>
 
@@ -38,6 +40,8 @@ SDL_Surface* tileMap = NULL;
 SDL_Event Event;
  
 SDL_Rect clip[CLIP_MAX];
+
+GLuint texture2[1];
 
 int tileArray[ROOM_HEIGHT][ROOM_WIDTH] = {
 	{0,0,0,0,0,0,0,0,0,0},
@@ -82,6 +86,15 @@ struct Tile {
 	int layer;
 };
 
+void applySurface(int x, int y, SDL_Surface* source, SDL_Surface* destination, SDL_Rect* clip = NULL) {
+	SDL_Rect offset;
+ 
+	offset.x = x;
+	offset.y = y;
+ 
+	SDL_BlitSurface(source, clip, destination, &offset);
+}
+
 // Plane class
 // This is the plane we'll draw the tileset on
 // So eventually it'll need to be the size of the level
@@ -90,11 +103,11 @@ struct Tile {
 class Plane {
 public:
 	Plane() : pSurface(NULL), x(0), y(0) {};
-	void Load(std::string _filename);
+	SDL_Surface* Load(std::string _filename);
 	void generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
-	SDL_Surface* assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip);
-	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination);
+	SDL_Surface* assembleMap(SDL_Surface* tileSurface, std::vector<Tile*> _tilesVec, SDL_Rect* _clip);
+	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip);
 
 private:
 	int x, y;
@@ -116,12 +129,11 @@ int Plane::nextPowerOfTwo(int _num) {
 	return _num;
 }
 
-void Plane::Load(std::string _filename) {
+SDL_Surface* Plane::Load(std::string _filename) {
 	GLint nOfColors;
 	GLenum texture_format;
 	SDL_Surface* loadedImage = IMG_Load(_filename.c_str());
 	SDL_Surface* optimizedImage = NULL;
-	SDL_Surface* powerSurface = NULL;
 
 	if (loadedImage != NULL) {
 		optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), 
@@ -153,38 +165,29 @@ void Plane::Load(std::string _filename) {
 			texture_format = GL_BGR;
 	}
 
-	glGenTextures(1, &texture[0]);
+	//glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+	/*glGenTextures(1, &texture[0]);
 	glBindTexture(GL_TEXTURE_2D, texture[0]);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, nOfColors, optimizedImage->w, optimizedImage->h, 0, texture_format, 
 		GL_UNSIGNED_BYTE, optimizedImage->pixels);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);*/
 
-	//glDeleteTextures(1, &texture[0]);
+	/*gluBuild2DMipmaps(GL_TEXTURE_2D, 3, optimizedImage->w, optimizedImage->h, texture_format, GL_UNSIGNED_BYTE,
+		optimizedImage->pixels);*/
+
+	return optimizedImage;
 }
 
 void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
 	GLint texWidth[1], texHeight[1]; 
 	int Incr = 0, row = 0, test = 1;
 
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
-
-	/*int testH = texHeight[0] / _tileHeight;
-	int testW = texWidth[0] / _tileWidth;*/
-
-
-	/*for (GLint i = 0; i <= ROOM_HEIGHT; ++i) {
-		for (GLint j = 0; j <= ROOM_WIDTH; ++j) {
-			clip[j+rowIncr].x = ((j+rowIncr) * _tileWidth);
-			clip[j*i].y = ((j*i) * _tileHeight);
-			clip[j+rowIncr].w = _tileWidth;
-			clip[j+rowIncr].h = _tileHeight;
-		}
-		rowIncr+=ROOM_WIDTH;
-	}*/
+	glGetTexLevelParameteriv(_target, 0, GL_TEXTURE_WIDTH, texWidth);
+	glGetTexLevelParameteriv(_target, 0, GL_TEXTURE_HEIGHT, texHeight);
 
 	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
 		clip[test+Incr].x = ((test+Incr) * _tileWidth);
@@ -207,10 +210,10 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 
 		Tile* tempTile;
 
-		for (int i = 0; i < CLIP_MAX; ++i) {
+		for (int i = 0; i < /*CLIP_MAX*/ROOM_HEIGHT*ROOM_WIDTH; ++i) {
 			tempTile = new Tile;
 
-			tempTile->clip = &_clip[_tileArray[i]];
+			tempTile->clip = &_clip[i];
 			tempTile->type = _typeArray[i];
 			tempTile->layer = _layerArray[i];
 
@@ -225,28 +228,38 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 
 // Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
 
-SDL_Surface* Plane::assembleMap(std::vector<Tile*> _tilesVec, SDL_Rect* _clip)  {
-	SDL_Surface* tempSurface = NULL;
+SDL_Surface* Plane::assembleMap(SDL_Surface* tileSurface, std::vector<Tile*> _tilesVec, SDL_Rect* _clip)  {
+	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH, ROOM_HEIGHT, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
 
 	// Gonna try to use an iterator to get through the tiles, instead of copying info to dummy tile.
 	// need to fix this, it is making a surface out of each clip, which is wrong.
 	// this will just draw the last clip
 	for (std::vector<Tile*>::const_iterator iter = _tilesVec.begin(); iter != _tilesVec.end(); ++iter) {
+		for (int i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+			//applySurface(x, y, tileSurface, );
 
-		tempSurface = SDL_CreateRGBSurface(NULL, nextPowerOfTwo((*iter)->clip->w), 
-			nextPowerOfTwo((*iter)->clip->h), 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-
+		}
 	}
 
 	return tempSurface;
 }
 
-void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination) {
+void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip) {
 
-	SDL_Rect offset;
-	offset.x = 0; offset.y = 0;
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glGenTextures(1, &texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[0]);
 
-	SDL_BlitSurface(_blitSource, NULL, _blitDestination, &offset);
+	glTexImage2D(GL_TEXTURE_2D, 0, 4, _blitSource->w, _blitSource->h, 0, GL_BGRA, 
+		GL_UNSIGNED_BYTE, _blitSource->pixels);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	gluBuild2DMipmaps(GL_TEXTURE_2D, 3, _blitSource->w, _blitSource->h, GL_BGRA, GL_UNSIGNED_BYTE,
+		_blitSource->pixels);
+	
+	applySurface(0, 0, _blitSource, _blitDestination, clip);
 
 	//Offset
 	glTranslatef(x, y, 0);
@@ -272,6 +285,8 @@ bool init_GL() {
 	glClearColor(0, 0, 0, 0);
 	glEnable(GL_TEXTURE_2D);
 
+	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
 	// Projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -288,46 +303,36 @@ bool init_GL() {
 	return true;
 }
  
-void applySurface(int x, int y, SDL_Surface* source, SDL_Surface* destination, SDL_Rect* clip = NULL) {
-	SDL_Rect offset;
- 
-	offset.x = x;
-	offset.y = y;
- 
-	SDL_BlitSurface(source, clip, destination, &offset);
-}
 
  
 int main(int argc, char *argv[]) {
 	Plane tileset = Plane();
 	bool quit = false, isFullscreen = false;
+
  
 	if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) 
 		return true;
 
-	//std::vector<Tile*> tilesVec;
- 
 	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE);
 
 	if (init_GL() == false)
 		return false;
  
-	tileset.Load("tileset16.png");
+	tileMap = tileset.Load("tileset16.png");
+
 
 	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
 
-	tileMap = tileset.assembleMap(tilesVec, clip);
+	//tileMap = tileset.assembleMap(tilesVec, clip);
 
-	//generateClips(sTileset, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
+	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, tileMap->w, tileMap->h, 32, tileMap->format->Rmask, tileMap->format->Gmask, tileMap->format->Bmask, tileMap->format->Amask);
 
-	//tilesVec = generateTiles(tilesVec, tileArray, typeArray, layerArray, clip);
- 
-	/*int xOffset = 0;
+	int xOffset = 0;
 	int yOffset = 0;
 	int incr = 0;
-	int row_incr = 0;*/
+	int row_incr = 0;
  
 	while (quit == false) {
 		while (SDL_PollEvent(&Event)) {
@@ -352,38 +357,27 @@ int main(int argc, char *argv[]) {
 					}
 			}
 
-			// Fix this to use 2D Array
-			// Do i even need to do any of these loops?
-			// Draw should be able to do everything needed, after assembledMap.
-
-			/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
+			for (int i = 0; i < ROOM_HEIGHT; ++i) {
 				if (row_incr >= ROOM_HEIGHT) {
 					break;
 				} else {
 					row_incr++;
 				}
 				for (int j = 0; j < ROOM_WIDTH; ++j) {
-					//applySurface(xOffset, yOffset, tileset, screen, tilesVec[i+incr+j]->clip);
-					//
+					applySurface(xOffset, yOffset, tileMap, tempSurface, tilesVec[i+incr+j]->clip);
 					xOffset += TILE_WIDTH;
-				}
-
+				}
 				xOffset = 0;
 				yOffset += TILE_HEIGHT;
 				incr += (ROOM_WIDTH-1);
-			}*/
+			}
 
-			/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
-				for (int j = 0; j < ROOM_WIDTH; ++j) {
-					//Use 2d Array here:
-					// Example: tileArray[i][j];
-				}
-			}*/
 			glClear(GL_COLOR_BUFFER_BIT);
 
-			tileset.Draw(tileMap, screen);
+			//tileset.Draw(tileMap, screen, clip);
+			tileset.Draw(tempSurface, screen, clip);
 
-			//xOffset = yOffset = 0;
+			xOffset = yOffset = 0;
 			SDL_GL_SwapBuffers();
 		}
 	}
