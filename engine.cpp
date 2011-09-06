@@ -289,7 +289,6 @@ bool init_GL() {
 
 	// Model View
 	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
 
 	// Errors
 	if (glGetError() != GL_NO_ERROR)
