@@ -106,7 +106,7 @@ public:
 	SDL_Surface* Load(std::string _filename);
 	void generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
-	SDL_Surface* assembleMap(SDL_Surface* tileSurface, std::vector<Tile*> _tilesVec, SDL_Rect* _clip);
+	SDL_Surface* assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec/*, SDL_Rect* _clip*/);
 	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip);
 
 private:
@@ -165,20 +165,6 @@ SDL_Surface* Plane::Load(std::string _filename) {
 			texture_format = GL_BGR;
 	}
 
-	//glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-
-	/*glGenTextures(1, &texture[0]);
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, nOfColors, optimizedImage->w, optimizedImage->h, 0, texture_format, 
-		GL_UNSIGNED_BYTE, optimizedImage->pixels);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);*/
-
-	/*gluBuild2DMipmaps(GL_TEXTURE_2D, 3, optimizedImage->w, optimizedImage->h, texture_format, GL_UNSIGNED_BYTE,
-		optimizedImage->pixels);*/
-
 	return optimizedImage;
 }
 
@@ -228,16 +214,28 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 
 // Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
 
-SDL_Surface* Plane::assembleMap(SDL_Surface* tileSurface, std::vector<Tile*> _tilesVec, SDL_Rect* _clip)  {
+SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
 	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH, ROOM_HEIGHT, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
 
-	// Gonna try to use an iterator to get through the tiles, instead of copying info to dummy tile.
-	// need to fix this, it is making a surface out of each clip, which is wrong.
-	// this will just draw the last clip
+	int xOffset = 0, yOffset = 0, row_incr = 0, incr = 0;
+	// This should  be able to applySurface to the tempSurface and return it
 	for (std::vector<Tile*>::const_iterator iter = _tilesVec.begin(); iter != _tilesVec.end(); ++iter) {
 		for (int i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-			//applySurface(x, y, tileSurface, );
+			for (int i = 0; i < ROOM_HEIGHT; ++i) {
+				if (row_incr >= ROOM_HEIGHT) {
+					break;
+				} else {
+					row_incr++;
+				}
+				for (int j = 0; j < ROOM_WIDTH; ++j) {
+					applySurface(xOffset, yOffset, _Source, tempSurface, _tilesVec[i+incr+j]->clip);
+					xOffset += TILE_WIDTH;
+				}
 
+				xOffset = 0;
+				yOffset += TILE_HEIGHT;
+				incr += (ROOM_WIDTH-1);
+			}		
 		}
 	}
 
@@ -255,9 +253,6 @@ void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Re
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	gluBuild2DMipmaps(GL_TEXTURE_2D, 3, _blitSource->w, _blitSource->h, GL_BGRA, GL_UNSIGNED_BYTE,
-		_blitSource->pixels);
 	
 	applySurface(0, 0, _blitSource, _blitDestination, clip);
 
@@ -275,7 +270,6 @@ void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Re
 		glTexCoord2f(1, 1); glVertex2i(1000, 1000);
 		glTexCoord2f(0, 1); glVertex2i(0, 1000);
 	glEnd();
-	glFlush();
 
 	//Reset
 	glLoadIdentity();
@@ -313,7 +307,7 @@ int main(int argc, char *argv[]) {
 	if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) 
 		return true;
 
-	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE);
+	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE | SDL_DOUBLEBUF);
 
 	if (init_GL() == false)
 		return false;
@@ -324,10 +318,26 @@ int main(int argc, char *argv[]) {
 	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
+	
+	/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
+		if (row_incr >= ROOM_HEIGHT) {
+			break;
+		} else {
+			row_incr++;
+		}
+		for (int j = 0; j < ROOM_WIDTH; ++j) {*/
+			tileMap = tileset.assembleMap(tileMap, tilesVec/*, tilesVec[i+incr+j]->clip*/);
+			//applySurface(xOffset, yOffset, tileMap, tempSurface, tilesVec[i+incr+j]->clip);
+			/*xOffset += TILE_WIDTH;
+		}
 
-	//tileMap = tileset.assembleMap(tilesVec, clip);
+		xOffset = 0;
+		yOffset += TILE_HEIGHT;
+		incr += (ROOM_WIDTH-1);
+	}*/
+	
 
-	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, tileMap->w, tileMap->h, 32, tileMap->format->Rmask, tileMap->format->Gmask, tileMap->format->Bmask, tileMap->format->Amask);
+	//SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, tileMap->w, tileMap->h, 32, tileMap->format->Rmask, tileMap->format->Gmask, tileMap->format->Bmask, tileMap->format->Amask);
 
 	int xOffset = 0;
 	int yOffset = 0;
@@ -357,7 +367,7 @@ int main(int argc, char *argv[]) {
 					}
 			}
 
-			for (int i = 0; i < ROOM_HEIGHT; ++i) {
+			/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
 				if (row_incr >= ROOM_HEIGHT) {
 					break;
 				} else {
@@ -366,16 +376,18 @@ int main(int argc, char *argv[]) {
 				for (int j = 0; j < ROOM_WIDTH; ++j) {
 					applySurface(xOffset, yOffset, tileMap, tempSurface, tilesVec[i+incr+j]->clip);
 					xOffset += TILE_WIDTH;
-				}
+				}
+
 				xOffset = 0;
 				yOffset += TILE_HEIGHT;
 				incr += (ROOM_WIDTH-1);
-			}
+			}*/
 
+			glClear(GL_DEPTH_BUFFER_BIT);
 			glClear(GL_COLOR_BUFFER_BIT);
 
-			//tileset.Draw(tileMap, screen, clip);
-			tileset.Draw(tempSurface, screen, clip);
+			tileset.Draw(tileMap, screen, clip);
+			//tileset.Draw(tempSurface, screen, clip);
 
 			xOffset = yOffset = 0;
 			SDL_GL_SwapBuffers();
