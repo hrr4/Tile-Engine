@@ -141,7 +141,7 @@ SDL_Surface* Plane::Load(std::string _filename) {
 			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
 		// Only blitting to test out functionality for now. Will have to blit the rebuilt
 		// tilemap when i get it goin.
-		//SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
+		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
 		SDL_FreeSurface(loadedImage);
 	}
  
@@ -219,23 +219,22 @@ SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesV
 		_Source->format->Bmask, _Source->format->Amask);
 
 	int xOffset = 0, yOffset = 0, row_incr = 0, incr = 0;
-	for (int i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		for (int i = 0; i < ROOM_HEIGHT; ++i) {
-			if (row_incr >= ROOM_HEIGHT) {
-				break;
-			} else {
-				row_incr++;
-			}
-			for (int j = 0; j < ROOM_WIDTH; ++j) {
-				applySurface(xOffset, yOffset, _Source, tempSurface, _tilesVec[i+incr+j]->clip);
-				xOffset += TILE_WIDTH;
-			}
+	for (int i = 0; i < ROOM_HEIGHT; ++i) {
+		if (row_incr >= ROOM_HEIGHT) {
+			break;
+		} else {
+			row_incr++;
+		}
+		// Hrm, make sure this shit works tested and it doesnt
+		for (int j = 0; j < ROOM_WIDTH; ++j) {
+			applySurface(xOffset, yOffset, _Source, tempSurface, _tilesVec[i+incr+j]->clip);
+			xOffset += TILE_WIDTH;
+		}
 	
-			xOffset = 0;
-			yOffset += TILE_HEIGHT;
-			incr += (ROOM_WIDTH-1);
-		}		
-	}
+		xOffset = 0;
+		yOffset += TILE_HEIGHT;
+		incr += (ROOM_WIDTH-1);
+	}		
 
 	return tempSurface;
 }
@@ -303,10 +302,14 @@ int main(int argc, char *argv[]) {
  
 	tileMap = tileset.Load("tileset16.png");
 
+	SDL_SaveBMP(tileMap, "test1.bmp");
+
 	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
 	
+	SDL_SaveBMP(tileMap, "testbeforeassmble.bmp");
+
 	tileMap = tileset.assembleMap(tileMap, tilesVec);
 	
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -318,6 +321,8 @@ int main(int argc, char *argv[]) {
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	SDL_SaveBMP(tileMap, "test2.bmp");
 
 	int xOffset = 0;
 	int yOffset = 0;
