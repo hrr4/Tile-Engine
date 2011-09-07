@@ -189,8 +189,7 @@ void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_R
 	}
 }
 
-std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, 
-	SDL_Rect* _clip) {
+std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
 
 		std::vector<Tile*> tempVec;
 
@@ -215,26 +214,19 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 // Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
 
 SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
-	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH, ROOM_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, 
-		_Source->format->Bmask, _Source->format->Amask);
+	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH, ROOM_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
 
-	int xOffset = 0, yOffset = 0, row_incr = 0, incr = 0;
-	for (int i = 0; i < ROOM_HEIGHT; ++i) {
-		if (row_incr >= ROOM_HEIGHT) {
-			break;
-		} else {
-			row_incr++;
-		}
-		// Hrm, make sure this shit works tested and it doesnt
-		for (int j = 0; j < ROOM_WIDTH; ++j) {
-			applySurface(xOffset, yOffset, _Source, tempSurface, _tilesVec[i+incr+j]->clip);
-			xOffset += TILE_WIDTH;
-		}
+	int Incr = 0, row = 0, test = 1;
 	
-		xOffset = 0;
-		yOffset += TILE_HEIGHT;
-		incr += (ROOM_WIDTH-1);
-	}		
+	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+		applySurface((test+Incr) * _tilesVec[i]->clip->w, row * _tilesVec[i]->clip->h, _Source, tempSurface, _tilesVec[test+Incr]->clip);
+		if (test >= ROOM_WIDTH) {
+			row++;
+			Incr+=test;
+			test = 0;
+		}	
+		test++;
+	}
 
 	return tempSurface;
 }
@@ -316,8 +308,7 @@ int main(int argc, char *argv[]) {
 	glGenTextures(1, &texture2[0]);
 	glBindTexture(GL_TEXTURE_2D, texture2[0]);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, 4, tileMap->w, tileMap->h, 0, GL_BGRA, 
-		GL_UNSIGNED_BYTE, tileMap->pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, 4, tileMap->w, tileMap->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, tileMap->pixels);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
