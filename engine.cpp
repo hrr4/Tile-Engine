@@ -141,7 +141,7 @@ SDL_Surface* Plane::Load(std::string _filename) {
 			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
 		// Only blitting to test out functionality for now. Will have to blit the rebuilt
 		// tilemap when i get it goin.
-		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
+		//SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
 		SDL_FreeSurface(loadedImage);
 	}
  
@@ -215,28 +215,26 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 // Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
 
 SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
-	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH, ROOM_HEIGHT, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH, ROOM_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, 
+		_Source->format->Bmask, _Source->format->Amask);
 
 	int xOffset = 0, yOffset = 0, row_incr = 0, incr = 0;
-	// This should  be able to applySurface to the tempSurface and return it
-	for (std::vector<Tile*>::const_iterator iter = _tilesVec.begin(); iter != _tilesVec.end(); ++iter) {
-		for (int i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-			for (int i = 0; i < ROOM_HEIGHT; ++i) {
-				if (row_incr >= ROOM_HEIGHT) {
-					break;
-				} else {
-					row_incr++;
-				}
-				for (int j = 0; j < ROOM_WIDTH; ++j) {
-					applySurface(xOffset, yOffset, _Source, tempSurface, _tilesVec[i+incr+j]->clip);
-					xOffset += TILE_WIDTH;
-				}
-
-				xOffset = 0;
-				yOffset += TILE_HEIGHT;
-				incr += (ROOM_WIDTH-1);
-			}		
-		}
+	for (int i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+		for (int i = 0; i < ROOM_HEIGHT; ++i) {
+			if (row_incr >= ROOM_HEIGHT) {
+				break;
+			} else {
+				row_incr++;
+			}
+			for (int j = 0; j < ROOM_WIDTH; ++j) {
+				applySurface(xOffset, yOffset, _Source, tempSurface, _tilesVec[i+incr+j]->clip);
+				xOffset += TILE_WIDTH;
+			}
+	
+			xOffset = 0;
+			yOffset += TILE_HEIGHT;
+			incr += (ROOM_WIDTH-1);
+		}		
 	}
 
 	return tempSurface;
@@ -244,17 +242,10 @@ SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesV
 
 void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip) {
 
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glGenTextures(1, &texture[0]);
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, 4, _blitSource->w, _blitSource->h, 0, GL_BGRA, 
-		GL_UNSIGNED_BYTE, _blitSource->pixels);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	
-	applySurface(0, 0, _blitSource, _blitDestination, clip);
+	applySurface(0, 0, _blitSource, _blitDestination, NULL);
 
 	//Offset
 	glTranslatef(x, y, 0);
@@ -297,7 +288,6 @@ bool init_GL() {
 }
  
 
- 
 int main(int argc, char *argv[]) {
 	Plane tileset = Plane();
 	bool quit = false, isFullscreen = false;
@@ -313,30 +303,21 @@ int main(int argc, char *argv[]) {
  
 	tileMap = tileset.Load("tileset16.png");
 
-
 	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
 	
-	/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
-		if (row_incr >= ROOM_HEIGHT) {
-			break;
-		} else {
-			row_incr++;
-		}
-		for (int j = 0; j < ROOM_WIDTH; ++j) {*/
-			tileMap = tileset.assembleMap(tileMap, tilesVec/*, tilesVec[i+incr+j]->clip*/);
-			//applySurface(xOffset, yOffset, tileMap, tempSurface, tilesVec[i+incr+j]->clip);
-			/*xOffset += TILE_WIDTH;
-		}
-
-		xOffset = 0;
-		yOffset += TILE_HEIGHT;
-		incr += (ROOM_WIDTH-1);
-	}*/
+	tileMap = tileset.assembleMap(tileMap, tilesVec);
 	
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glGenTextures(1, &texture2[0]);
+	glBindTexture(GL_TEXTURE_2D, texture2[0]);
 
-	//SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, tileMap->w, tileMap->h, 32, tileMap->format->Rmask, tileMap->format->Gmask, tileMap->format->Bmask, tileMap->format->Amask);
+	glTexImage2D(GL_TEXTURE_2D, 0, 4, tileMap->w, tileMap->h, 0, GL_BGRA, 
+		GL_UNSIGNED_BYTE, tileMap->pixels);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	int xOffset = 0;
 	int yOffset = 0;
@@ -353,10 +334,10 @@ int main(int argc, char *argv[]) {
 					switch (Event.key.keysym.sym) {
 						case SDLK_SPACE:
 							if (!isFullscreen) {
-								screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_FULLSCREEN);						
+								screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_FULLSCREEN | SDL_DOUBLEBUF);						
 								isFullscreen = true;
 							} else {
-								screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE);
+								screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_OPENGL | SDL_RESIZABLE | SDL_DOUBLEBUF);
 							}
 							break;
 
@@ -366,27 +347,7 @@ int main(int argc, char *argv[]) {
 					}
 			}
 
-			/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
-				if (row_incr >= ROOM_HEIGHT) {
-					break;
-				} else {
-					row_incr++;
-				}
-				for (int j = 0; j < ROOM_WIDTH; ++j) {
-					applySurface(xOffset, yOffset, tileMap, tempSurface, tilesVec[i+incr+j]->clip);
-					xOffset += TILE_WIDTH;
-				}
-
-				xOffset = 0;
-				yOffset += TILE_HEIGHT;
-				incr += (ROOM_WIDTH-1);
-			}*/
-
-			glClear(GL_DEPTH_BUFFER_BIT);
-			glClear(GL_COLOR_BUFFER_BIT);
-
 			tileset.Draw(tileMap, screen, clip);
-			//tileset.Draw(tempSurface, screen, clip);
 
 			xOffset = yOffset = 0;
 			SDL_GL_SwapBuffers();
@@ -398,6 +359,7 @@ int main(int argc, char *argv[]) {
 	SDL_FreeSurface(tileMap);
 	SDL_FreeSurface(screen);
 
+	glDisable(GL_TEXTURE_2D);
 	SDL_Quit();
 
 	exit(0);
