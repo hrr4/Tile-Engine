@@ -104,9 +104,9 @@ class Plane {
 public:
 	Plane() : pSurface(NULL), x(0), y(0) {};
 	SDL_Surface* Load(std::string _filename);
-	void generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
+	void generateClips(int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
-	SDL_Surface* assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec/*, SDL_Rect* _clip*/);
+	SDL_Surface* assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec);
 	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip);
 
 private:
@@ -168,12 +168,8 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	return optimizedImage;
 }
 
-void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
-	GLint texWidth[1], texHeight[1]; 
+void Plane::generateClips(int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
 	int Incr = 0, row = 0, test = 1;
-
-	glGetTexLevelParameteriv(_target, 0, GL_TEXTURE_WIDTH, texWidth);
-	glGetTexLevelParameteriv(_target, 0, GL_TEXTURE_HEIGHT, texHeight);
 
 	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
 		clip[test+Incr].x = ((test+Incr) * _tileWidth);
@@ -190,25 +186,24 @@ void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_R
 }
 
 std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
+	std::vector<Tile*> tempVec;
 
-		std::vector<Tile*> tempVec;
+	Tile* tempTile;
 
-		Tile* tempTile;
+	for (int i = 0; i < /*CLIP_MAX*/ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+		tempTile = new Tile;
 
-		for (int i = 0; i < /*CLIP_MAX*/ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-			tempTile = new Tile;
+		tempTile->clip = &_clip[i];
+		tempTile->type = _typeArray[i];
+		tempTile->layer = _layerArray[i];
 
-			tempTile->clip = &_clip[i];
-			tempTile->type = _typeArray[i];
-			tempTile->layer = _layerArray[i];
+		tempVec.push_back(tempTile);
 
-			tempVec.push_back(tempTile);
+	}
+	tempTile = NULL;
+	delete tempTile;
 
-		}
-		tempTile = NULL;
-		delete tempTile;
-
-		return tempVec;
+	return tempVec;
 }
 
 // Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
@@ -232,7 +227,6 @@ SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesV
 }
 
 void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip) {
-
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -296,7 +290,7 @@ int main(int argc, char *argv[]) {
 
 	SDL_SaveBMP(tileMap, "test1.bmp");
 
-	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
+	tileset.generateClips(TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
 	
