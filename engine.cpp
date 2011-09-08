@@ -169,11 +169,18 @@ SDL_Surface* Plane::Load(std::string _filename) {
 }
 
 void Plane::generateClips(int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
-	int Incr = 0, row = 0, test = 1;
-
+	int Incr = 0, row = 0, test = 0;//1;
+	// Uh this isn't generating the clips..its just counting n shit and this is 
+	// totally fucking wrong =/ it needs to read the tileArray and insert each position
+	// into the correct tile. Not just magically count around the square....
 	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		clip[test+Incr].x = ((test+Incr) * _tileWidth);
+		int arrayTest = tileArray[row][test];
+		/*clip[test+Incr].x = ((test+Incr) * _tileWidth);
 		clip[test+Incr].y = (row * _tileHeight);
+		clip[test+Incr].w = _tileWidth;
+		clip[test+Incr].h = _tileHeight;*/
+		clip[test+Incr].x = (arrayTest * _tileWidth);
+		clip[test+Incr].y = /*(arrayTest * _tileHeight);*/ 0;
 		clip[test+Incr].w = _tileWidth;
 		clip[test+Incr].h = _tileHeight;
 		if (test >= ROOM_WIDTH) {
@@ -183,6 +190,16 @@ void Plane::generateClips(int _tileWidth, int _tileHeight, SDL_Rect* _clip, int 
 		}	
 		test++;
 	}
+
+	/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
+		for (int j = 0; j < ROOM_WIDTH; ++j) {
+			int test = tileArray[i][j];
+			clip[].x = j * _tileWidth;
+			clip[].x = i * _tileHeight;
+			clip[].w = _tileWidth;
+			clip[].h = _tileHeight;
+		}
+	}*/
 }
 
 std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
@@ -209,12 +226,13 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 // Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
 
 SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
-	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH, ROOM_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
+	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, _Source->w, _Source->h, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
 
-	int Incr = 0, row = 0, test = 1;
+	int Incr = 0, row = 0, test = 0;
 	
-	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		applySurface((test+Incr) * _tilesVec[i]->clip->w, row * _tilesVec[i]->clip->h, _Source, tempSurface, _tilesVec[test+Incr]->clip);
+	for (GLint i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+		applySurface(test * _tilesVec[i]->clip->w, row * _tilesVec[i]->clip->h, _Source, tempSurface, _tilesVec[i]->clip);
+		SDL_SaveBMP(tempSurface, "tempsurface.bmp");
 		if (test >= ROOM_WIDTH) {
 			row++;
 			Incr+=test;
@@ -223,6 +241,7 @@ SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesV
 		test++;
 	}
 
+	SDL_SaveBMP(tempSurface, "tempsurface.bmp");
 	return tempSurface;
 }
 
