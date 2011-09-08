@@ -104,7 +104,7 @@ class Plane {
 public:
 	Plane() : pSurface(NULL), x(0), y(0) {};
 	SDL_Surface* Load(std::string _filename);
-	void generateClips(int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
+	void generateClips(SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
 	SDL_Surface* assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec);
 	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip);
@@ -139,15 +139,24 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), 
 			nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask,
 			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
-		// Only blitting to test out functionality for now. Will have to blit the rebuilt
-		// tilemap when i get it goin.
+
 		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
 		SDL_FreeSurface(loadedImage);
 	}
  
 	if (optimizedImage != NULL) {
-			/*Uint32 colorkey = SDL_MapRGBA(optimizedImage->format, 255, 0, 255, 255);
-			SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);*/
+			Uint32 colorkey = SDL_MapRGBA(optimizedImage->format, 255, 0, 255, 255);
+			SDL_LockSurface(optimizedImage);
+			// Direct access
+			// we need to loop through and if the pixel matches the colorkey, we set it to the alpha channel.
+			for (int i = 0; i < optimizedImage->h; ++i) {
+				for (int j = 0; j < optimizedImage->w; ++j) {
+					// evaluation code here
+				}
+			}
+			// unlock it to release back to program
+			SDL_UnlockSurface(optimizedImage);
+			//SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
 			//SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
 	}
 
@@ -168,27 +177,30 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	return optimizedImage;
 }
 
-void Plane::generateClips(int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
-	int Incr = 0, row = 0, test = 0;//1;
-	// Uh this isn't generating the clips..its just counting n shit and this is 
-	// totally fucking wrong =/ it needs to read the tileArray and insert each position
-	// into the correct tile. Not just magically count around the square....
+void Plane::generateClips(SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
+	int Incr = 0, row = 0, xPos = 0;
+	int maxWidth = _Source->w, testRow = 0;
+
 	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		int arrayTest = tileArray[row][test];
+		int arrayTest = tileArray[row][xPos];
+		int arrayYTest = 0;
 		/*clip[test+Incr].x = ((test+Incr) * _tileWidth);
 		clip[test+Incr].y = (row * _tileHeight);
 		clip[test+Incr].w = _tileWidth;
 		clip[test+Incr].h = _tileHeight;*/
-		clip[test+Incr].x = (arrayTest * _tileWidth);
-		clip[test+Incr].y = /*(arrayTest * _tileHeight);*/ 0;
-		clip[test+Incr].w = _tileWidth;
-		clip[test+Incr].h = _tileHeight;
-		if (test >= ROOM_WIDTH) {
+		clip[xPos+Incr].x = (arrayTest * _tileWidth);
+		clip[xPos+Incr].y = (arrayYTest * _tileHeight);
+		clip[xPos+Incr].w = _tileWidth;
+		clip[xPos+Incr].h = _tileHeight;
+		if (xPos >= ROOM_WIDTH) {
 			row++;
-			Incr+=test;
-			test = 0;
-		}	
-		test++;
+			Incr+=xPos;
+			xPos = 0;
+		}
+		if ((arrayTest * _tileWidth) >= maxWidth) {
+			arrayYTest = tileArray[++testRow][xPos];
+		}
+		xPos++;
 	}
 
 	/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
@@ -207,7 +219,7 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 
 	Tile* tempTile;
 
-	for (int i = 0; i < /*CLIP_MAX*/ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+	for (int i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
 		tempTile = new Tile;
 
 		tempTile->clip = &_clip[i];
@@ -309,7 +321,7 @@ int main(int argc, char *argv[]) {
 
 	SDL_SaveBMP(tileMap, "test1.bmp");
 
-	tileset.generateClips(TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
+	tileset.generateClips(tileMap, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
 	
