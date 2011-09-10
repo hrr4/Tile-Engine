@@ -156,11 +156,12 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		if (SDL_MUSTLOCK(optimizedImage)) {
 			SDL_LockSurface(optimizedImage);
 		}
-		Uint32 colorkey = SDL_MapRGBA(optimizedImage->format, 255, 0, 255, 255);
+		Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255);
+		Uint32 pixel = 0;
 
 		for (int i = 0; i < optimizedImage->h; ++i) {
 			for (int j = 0; j < optimizedImage->w; ++j) {
-				Uint32 pixel = getPixel32(optimizedImage, j, i);
+				pixel = getPixel32(optimizedImage, j, i);
 
 				if (pixel == colorkey) {
 					pixel = SDL_MapRGBA(optimizedImage->format, 0, 0, 0, 0);
