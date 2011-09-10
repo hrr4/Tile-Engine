@@ -37,8 +37,6 @@ SDL_Event Event;
  
 SDL_Rect clip[CLIP_MAX];
 
-GLuint texture2[1];
-
 int tileArray[ROOM_HEIGHT][ROOM_WIDTH] = {
 	{0,0,0,0,0,0,0,0,0,0},
 	{0,0,1,1,1,1,1,1,0,0},
@@ -81,6 +79,8 @@ struct Tile {
 	std::string type;
 	int layer;
 };
+
+// Utilities
 
 void applySurface(int x, int y, SDL_Surface* source, SDL_Surface* destination, SDL_Rect* clip = NULL) {
 	SDL_Rect offset;
@@ -144,9 +144,7 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	SDL_Surface* optimizedImage = NULL;
 
 	if (loadedImage != NULL) {
-		optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), 
-			nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask,
-			loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
+		optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask, loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
 
 		SDL_BlitSurface(loadedImage, NULL, optimizedImage, NULL);
 		SDL_FreeSurface(loadedImage);
@@ -156,8 +154,8 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		if (SDL_MUSTLOCK(optimizedImage)) {
 			SDL_LockSurface(optimizedImage);
 		}
-		Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255);
-		Uint32 pixel = 0;
+
+		Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255), pixel = 0;
 
 		for (int i = 0; i < optimizedImage->h; ++i) {
 			for (int j = 0; j < optimizedImage->w; ++j) {
@@ -259,12 +257,10 @@ SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesV
 			xPos++;
 		}
 	}
-
-	SDL_SaveBMP(tempSurface, "tempsurface.bmp");
 	
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glGenTextures(1, &texture2[0]);
-	glBindTexture(GL_TEXTURE_2D, texture2[0]);
+	glGenTextures(1, &texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[0]);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, tempSurface->w, tempSurface->h, 0, texture_format, GL_UNSIGNED_BYTE, tempSurface->pixels);
 
