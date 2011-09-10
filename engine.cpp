@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_opengl.h>
+#include <SDL_endian.h>
 #include <gl/GL.h>
 #include <gl/GLU.h>
 #include <string>
@@ -95,6 +96,18 @@ void applySurface(int x, int y, SDL_Surface* source, SDL_Surface* destination, S
 	SDL_BlitSurface(source, clip, destination, &offset);
 }
 
+Uint32 getPixel32(SDL_Surface* _source, int _x, int _y) {
+	Uint32* pixels = (Uint32 *)_source->pixels;
+
+	return pixels[(_y*_source->w) + _x];
+}
+
+void putPixel32(SDL_Surface* _source, int x, int y, Uint32 _pixel) {
+	Uint32* pixels = (Uint32 *)_source->pixels;
+
+	pixels[(y*_source->w) + x] = _pixel;
+}
+
 // Plane class
 // This is the plane we'll draw the tileset on
 // So eventually it'll need to be the size of the level
@@ -113,6 +126,7 @@ private:
 	int x, y;
 	SDL_Surface* pSurface;
 	GLuint texture[1];
+	GLenum texture_format;
 	std::vector<Tile*> tilesVec;
 
 	int nextPowerOfTwo(int _num);
@@ -131,7 +145,6 @@ int Plane::nextPowerOfTwo(int _num) {
 
 SDL_Surface* Plane::Load(std::string _filename) {
 	GLint nOfColors;
-	GLenum texture_format;
 	SDL_Surface* loadedImage = IMG_Load(_filename.c_str());
 	SDL_Surface* optimizedImage = NULL;
 
@@ -145,33 +158,49 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	}
  
 	if (optimizedImage != NULL) {
-			Uint32 colorkey = SDL_MapRGBA(optimizedImage->format, 255, 0, 255, 255);
+		if (SDL_MUSTLOCK(optimizedImage)) {
 			SDL_LockSurface(optimizedImage);
-			// Direct access
-			// we need to loop through and if the pixel matches the colorkey, we set it to the alpha channel.
-			for (int i = 0; i < optimizedImage->h; ++i) {
-				for (int j = 0; j < optimizedImage->w; ++j) {
-					// evaluation code here
+		}
+		Uint32 colorkey = SDL_MapRGBA(optimizedImage->format, 255, 0, 255, 255);
+		SDL_LockSurface(optimizedImage);
+		// Direct access
+		// we need to loop through and if the pixel matches the colorkey, we set it to the alpha channel.
+		Uint32 pitchPixels = optimizedImage->pitch / 4;
+		Uint32 rgbMask = optimizedImage->format->Rmask | optimizedImage->format->Gmask | optimizedImage->format->Bmask;
+		int pixelAlpha = 0;
+		for (int i = 0; i < optimizedImage->h; ++i) {
+			for (int j = 0; j < optimizedImage->w; ++j) {
+				Uint32 pixel = getPixel32(optimizedImage, j, i);
+				int pixelAlpha = (pixel & optimizedImage->format->Amask) >> optimizedImage->format->Ashift;
+
+				if (pixel == colorkey) {
+					pixel = (pixel & rgbMask) | pixelAlpha;
+					putPixel32(optimizedImage, j, i, pixel);
 				}
 			}
-			// unlock it to release back to program
-			SDL_UnlockSurface(optimizedImage);
-			//SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
-			//SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
+		}
+		// unlock it to release back to program
+		//if (SDL_MUSTLOCK(optimizedImage)) {
+				SDL_UnlockSurface(optimizedImage);
+		//}
+		//SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
+		//SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
 	}
 
 	nOfColors = optimizedImage->format->BytesPerPixel;
 
 	if (nOfColors == 4) {
-		if (optimizedImage->format->Rmask == 0x000000ff)
+		if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
 			texture_format = GL_RGBA;
-		else
+		} else {
 			texture_format = GL_BGRA;
+		}
 	} else if (nOfColors == 3) {
-		if (optimizedImage->format->Rmask == 0x000000ff)
+		if (SDL_BYTEORDER == SDL_LIL_ENDIAN) {
 			texture_format = GL_RGB;
-		else
+		} else {
 			texture_format = GL_BGR;
+		}
 	}
 
 	return optimizedImage;
@@ -184,34 +213,22 @@ void Plane::generateClips(SDL_Surface* _Source, int _tileWidth, int _tileHeight,
 	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
 		int arrayTest = tileArray[row][xPos];
 		int arrayYTest = 0;
-		/*clip[test+Incr].x = ((test+Incr) * _tileWidth);
-		clip[test+Incr].y = (row * _tileHeight);
-		clip[test+Incr].w = _tileWidth;
-		clip[test+Incr].h = _tileHeight;*/
 		clip[xPos+Incr].x = (arrayTest * _tileWidth);
 		clip[xPos+Incr].y = (arrayYTest * _tileHeight);
 		clip[xPos+Incr].w = _tileWidth;
 		clip[xPos+Incr].h = _tileHeight;
-		if (xPos >= ROOM_WIDTH) {
-			row++;
-			Incr+=xPos;
-			xPos = 0;
-		}
+		// this probably wont work right..but i'll get to it later! :D
 		if ((arrayTest * _tileWidth) >= maxWidth) {
 			arrayYTest = tileArray[++testRow][xPos];
 		}
-		xPos++;
-	}
-
-	/*for (int i = 0; i < ROOM_HEIGHT; ++i) {
-		for (int j = 0; j < ROOM_WIDTH; ++j) {
-			int test = tileArray[i][j];
-			clip[].x = j * _tileWidth;
-			clip[].x = i * _tileHeight;
-			clip[].w = _tileWidth;
-			clip[].h = _tileHeight;
+		if (xPos >= ROOM_WIDTH) {
+			row++;
+			Incr+=xPos;
+			xPos = 1;
+		} else {
+			xPos++;
 		}
-	}*/
+	}
 }
 
 std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
@@ -240,20 +257,30 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
 	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, _Source->w, _Source->h, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
 
-	int Incr = 0, row = 0, test = 0;
+	int Incr = 0, row = 0, xPos = 0;
 	
 	for (GLint i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		applySurface(test * _tilesVec[i]->clip->w, row * _tilesVec[i]->clip->h, _Source, tempSurface, _tilesVec[i]->clip);
-		SDL_SaveBMP(tempSurface, "tempsurface.bmp");
-		if (test >= ROOM_WIDTH) {
+		applySurface(xPos * _tilesVec[i]->clip->w, row * _tilesVec[i]->clip->h, _Source, tempSurface, _tilesVec[i]->clip);
+		if (xPos >= (ROOM_WIDTH-1)) {
 			row++;
-			Incr+=test;
-			test = 0;
-		}	
-		test++;
+			Incr+=xPos;
+			xPos = 0;
+		}	else {
+			xPos++;
+		}
 	}
 
 	SDL_SaveBMP(tempSurface, "tempsurface.bmp");
+	
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glGenTextures(1, &texture2[0]);
+	glBindTexture(GL_TEXTURE_2D, texture2[0]);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, 4, tempSurface->w, tempSurface->h, 0, texture_format, GL_UNSIGNED_BYTE, tempSurface->pixels);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 	return tempSurface;
 }
 
@@ -319,31 +346,11 @@ int main(int argc, char *argv[]) {
  
 	tileMap = tileset.Load("tileset16.png");
 
-	SDL_SaveBMP(tileMap, "test1.bmp");
-
 	tileset.generateClips(tileMap, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
 	
-	SDL_SaveBMP(tileMap, "testbeforeassmble.bmp");
-
 	tileMap = tileset.assembleMap(tileMap, tilesVec);
-	
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glGenTextures(1, &texture2[0]);
-	glBindTexture(GL_TEXTURE_2D, texture2[0]);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, 4, tileMap->w, tileMap->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, tileMap->pixels);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	SDL_SaveBMP(tileMap, "test2.bmp");
-
-	int xOffset = 0;
-	int yOffset = 0;
-	int incr = 0;
-	int row_incr = 0;
  
 	while (quit == false) {
 		while (SDL_PollEvent(&Event)) {
@@ -370,7 +377,6 @@ int main(int argc, char *argv[]) {
 
 			tileset.Draw(tileMap, screen, clip);
 
-			xOffset = yOffset = 0;
 			SDL_GL_SwapBuffers();
 		}
 	}
