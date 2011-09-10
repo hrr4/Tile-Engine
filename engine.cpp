@@ -11,12 +11,7 @@
 	-Particle Effects - For lights n stuff
 	-'Painting' different environments - Example: Painting with a grass brush on green tiles will make random
 	grass sprites n stuff.
-	-Alpha Transparency - For stuff above other layers n such
-	
-	-On how to clip OpenGL Surfaces - Calculate tile width / pic width, tile height / pic height,
-		since glTexCoord's use percents. 
-		
-	- A way to get this to draw, is to assemble the tiles on a newly created RGB SDL Surface and blit that
+	%Alpha Transparency - For stuff above other layers n such
 */
  
 
@@ -162,29 +157,23 @@ SDL_Surface* Plane::Load(std::string _filename) {
 			SDL_LockSurface(optimizedImage);
 		}
 		Uint32 colorkey = SDL_MapRGBA(optimizedImage->format, 255, 0, 255, 255);
-		SDL_LockSurface(optimizedImage);
-		// Direct access
-		// we need to loop through and if the pixel matches the colorkey, we set it to the alpha channel.
-		Uint32 pitchPixels = optimizedImage->pitch / 4;
-		Uint32 rgbMask = optimizedImage->format->Rmask | optimizedImage->format->Gmask | optimizedImage->format->Bmask;
-		int pixelAlpha = 0;
+
 		for (int i = 0; i < optimizedImage->h; ++i) {
 			for (int j = 0; j < optimizedImage->w; ++j) {
 				Uint32 pixel = getPixel32(optimizedImage, j, i);
-				int pixelAlpha = (pixel & optimizedImage->format->Amask) >> optimizedImage->format->Ashift;
 
 				if (pixel == colorkey) {
-					pixel = (pixel & rgbMask) | pixelAlpha;
+					pixel = SDL_MapRGBA(optimizedImage->format, 0, 0, 0, 0);
 					putPixel32(optimizedImage, j, i, pixel);
 				}
 			}
 		}
-		// unlock it to release back to program
-		//if (SDL_MUSTLOCK(optimizedImage)) {
-				SDL_UnlockSurface(optimizedImage);
-		//}
-		//SDL_SetColorKey(optimizedImage, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
-		//SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
+
+		if (SDL_MUSTLOCK(optimizedImage)) {
+			SDL_UnlockSurface(optimizedImage);
+		}
+
+		SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
 	}
 
 	nOfColors = optimizedImage->format->BytesPerPixel;
