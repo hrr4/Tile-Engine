@@ -2,6 +2,7 @@
 #include <SDL_image.h>
 #include <SDL_opengl.h>
 #include <SDL_endian.h>
+#include <fstream>
 #include <gl/GL.h>
 #include <gl/GLU.h>
 #include <string>
@@ -20,13 +21,13 @@ const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 const int SCREEN_BPP = 32;
  
-const int ROOM_WIDTH = 10;
-const int ROOM_HEIGHT = 7;
+const int ROOM_WIDTH = 40;
+const int ROOM_HEIGHT = 30;
  
 const int TILE_WIDTH = 16;
 const int TILE_HEIGHT = 16;
  
-const int CLIP_MAX = 600;
+const int CLIP_MAX = 1200;
 
 // SDL Shit
  
@@ -37,39 +38,110 @@ SDL_Event Event;
  
 SDL_Rect clip[CLIP_MAX];
 
-int tileArray[ROOM_HEIGHT][ROOM_WIDTH] = {
-	{0,0,0,0,0,0,0,0,0,0},
-	{0,0,1,1,1,1,1,1,0,0},
-	{0,1,2,2,2,2,2,2,1,0},
-	{0,1,2,2,2,2,2,2,1,0},
-	{0,1,2,2,2,2,2,2,1,0},
-	{0,0,1,1,1,1,1,1,0,0},
-	{0,0,0,0,0,0,0,0,0,0}
+std::FILE levelFile;
+
+int tileArray3[ROOM_HEIGHT][ROOM_WIDTH] = {
+	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0},
+	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 };
  
 // u = unblock, b = block, w = water.
 // You can mix these together
  
-std::string typeArray[ROOM_HEIGHT][ROOM_WIDTH] = {
-	{"b", "b", "b", "b", "b", "b", "b", "b", "b", "b"},
-	{"b", "b", "u", "u", "u", "u", "u", "u", "b", "b"},
-	{"b", "b", "uw", "uw", "uw", "uw", "uw", "uw", "b", "b"},
-	{"b", "b", "u", "u", "u", "u", "u", "u", "b", "b"},
-	{"b", "b", "u", "u", "u", "u", "u", "u", "b", "b"},
-	{"b", "b", "u", "u", "u", "u", "u", "u", "b", "b"},
-	{"b", "b", "b", "b", "b", "b", "b", "b", "b", "b"}
+std::string typeArray[ROOM_HEIGHT*ROOM_WIDTH] = {
+	"b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "b", "b",
+	"b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b", "b"
 };
 
 // 2 will be the default layer
 
 short signed int layerArray[ROOM_HEIGHT][ROOM_WIDTH] = {
-	{1,1,1,1,1,1,1,1,1,1},
-	{0,0,1,1,1,1,1,1,0,0},
-	{0,1,2,2,2,2,2,2,1,0},
-	{0,1,2,2,2,2,2,2,1,0},
-	{0,1,2,2,2,2,2,2,1,0},
-	{0,0,1,1,1,1,1,1,0,0},
-	{0,0,0,0,0,0,0,0,0,0}
+	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0},
+	{0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0},
+	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 };
 
 // need this to associate types w/ clips = Tiles!
@@ -112,10 +184,11 @@ class Plane {
 public:
 	Plane() : pSurface(NULL), x(0), y(0) {};
 	SDL_Surface* Load(std::string _filename);
-	void generateClips(SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
-	std::vector<Tile*> generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip);
+	void generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
+	std::vector<Tile*> generateTiles(int* _tileArray, std::vector<std::string>* _typeArray, short int* _layerArray, SDL_Rect* _clip);
 	SDL_Surface* assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec);
 	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip);
+	void Read(std::string _file);
 
 private:
 	int x, y;
@@ -140,8 +213,8 @@ int Plane::nextPowerOfTwo(int _num) {
 
 SDL_Surface* Plane::Load(std::string _filename) {
 	GLint nOfColors;
-	SDL_Surface* loadedImage = IMG_Load(_filename.c_str());
-	SDL_Surface* optimizedImage = NULL;
+	SDL_Surface* loadedImage = IMG_Load(_filename.c_str()), *optimizedImage = NULL;
+	Uint32 colorkey = 0, pixel = 0;
 
 	if (loadedImage != NULL) {
 		optimizedImage = SDL_CreateRGBSurface(NULL, nextPowerOfTwo(loadedImage->w), nextPowerOfTwo(loadedImage->h), 32, loadedImage->format->Rmask, loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
@@ -154,8 +227,7 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		if (SDL_MUSTLOCK(optimizedImage)) {
 			SDL_LockSurface(optimizedImage);
 		}
-
-		Uint32 colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255), pixel = 0;
+		colorkey = SDL_MapRGB(optimizedImage->format, 255, 0, 255);
 
 		for (int i = 0; i < optimizedImage->h; ++i) {
 			for (int j = 0; j < optimizedImage->w; ++j) {
@@ -194,32 +266,34 @@ SDL_Surface* Plane::Load(std::string _filename) {
 	return optimizedImage;
 }
 
-void Plane::generateClips(SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
-	int Incr = 0, row = 0, xPos = 0;
-	int maxWidth = _Source->w, testRow = 0;
+void Plane::generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
+	int Incr = 0, row = 0, xPos = 0, maxWidth = _Source->w, testRow = 0;
+	int arrayYTest = 0;
+	int arrayTest = 0;
 
 	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		int arrayTest = tileArray[row][xPos];
-		int arrayYTest = 0;
+		arrayTest = tileArray3[row][xPos];
 		clip[xPos+Incr].x = (arrayTest * _tileWidth);
 		clip[xPos+Incr].y = (arrayYTest * _tileHeight);
 		clip[xPos+Incr].w = _tileWidth;
 		clip[xPos+Incr].h = _tileHeight;
 		// this probably wont work right..but i'll get to it later! :D
+		// Why can't i just do this in the xPos test below?
 		if ((arrayTest * _tileWidth) >= maxWidth) {
-			arrayYTest = tileArray[++testRow][xPos];
+			arrayYTest = tileArray3[++testRow][xPos];
 		}
 		if (xPos >= ROOM_WIDTH) {
 			row++;
 			Incr+=xPos;
 			xPos = 1;
+			//arrayYTest = tileArray3[++testRow][xPos];
 		} else {
 			xPos++;
 		}
 	}
 }
 
-std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
+std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::vector<std::string>* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
 	std::vector<Tile*> tempVec;
 
 	Tile* tempTile;
@@ -228,7 +302,7 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 		tempTile = new Tile;
 
 		tempTile->clip = &_clip[i];
-		tempTile->type = _typeArray[i];
+		tempTile->type = _typeArray->at(i);
 		tempTile->layer = _layerArray[i];
 
 		tempVec.push_back(tempTile);
@@ -243,7 +317,7 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::string* _typeArray
 // Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
 
 SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
-	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, _Source->w, _Source->h, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
+	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH*TILE_WIDTH, ROOM_HEIGHT*TILE_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
 
 	int Incr = 0, row = 0, xPos = 0;
 	
@@ -279,16 +353,14 @@ void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Re
 	//Offset
 	glTranslatef(x, y, 0);
 
-	glScaled(.5, .5, 1);
-
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
 	// Build
 	glBegin(GL_QUADS);
 		glTexCoord2f(0, 0); glVertex2i(0, 0);
-		glTexCoord2f(1, 0); glVertex2i(1000, 0);
-		glTexCoord2f(1, 1); glVertex2i(1000, 1000);
-		glTexCoord2f(0, 1); glVertex2i(0, 1000);
+		glTexCoord2f(1, 0); glVertex2i(ROOM_WIDTH*TILE_WIDTH, 0);
+		glTexCoord2f(1, 1); glVertex2i(ROOM_WIDTH*TILE_WIDTH, ROOM_HEIGHT*TILE_HEIGHT);
+		glTexCoord2f(0, 1); glVertex2i(0, ROOM_HEIGHT*TILE_HEIGHT);
 	glEnd();
 
 	//Reset
@@ -316,12 +388,28 @@ bool init_GL() {
 	return true;
 }
  
+void Plane::Read(std::string _file) {
+	std::ifstream derpstream;
+	std::string derpinput;
+	derpstream.open(_file);
+
+	if (derpstream.is_open()) {
+		while (!derpstream.eof()) {
+
+			derpstream >> derpinput;
+
+		}
+	}
+
+	derpstream.close();
+}
 
 int main(int argc, char *argv[]) {
 	Plane tileset = Plane();
 	bool quit = false, isFullscreen = false;
-
  
+	std::vector<std::string> testType(typeArray, typeArray + sizeof(typeArray) / sizeof(std::string));
+	std::vector<SDL_Rect*> clipRect;
 	if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) 
 		return true;
 
@@ -330,11 +418,13 @@ int main(int argc, char *argv[]) {
 	if (init_GL() == false)
 		return false;
  
+	tileset.Read("test.level");
+
 	tileMap = tileset.Load("tileset16.png");
 
 	tileset.generateClips(tileMap, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
-	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray, *typeArray, *layerArray, clip);
+	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray3, &testType, *layerArray, clip);
 	
 	tileMap = tileset.assembleMap(tileMap, tilesVec);
  
