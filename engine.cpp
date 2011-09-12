@@ -7,12 +7,16 @@
 #include <gl/GLU.h>
 #include <string>
 #include <vector>
+#include <cctype> //<ctype.h>
 
 /* IDEAS still needing implemented:
 	-Particle Effects - For lights n stuff
 	-'Painting' different environments - Example: Painting with a grass brush on green tiles will make random
 	grass sprites n stuff.
-	%Alpha Transparency - For stuff above other layers n such
+	%Alpha Transparency - For stuff above other layers n 
+	- Read in approx 10 letters @ a time.
+	- Have a vector of vectors for block maps and vector of vectors for layer maps
+	- Keep them together in the file - aka layer1 block1 layer2 block2 etc.
 */
  
 
@@ -387,15 +391,44 @@ bool init_GL() {
 }
  
 void Plane::Read(std::string _file) {
+	// vector of layer vectors
+	std::vector<std::vector<int>> layerVector2;
+	// vector of block vectors
+	std::vector<std::vector<std::string>> blockVector2;
+	
+	//int pos;
 	std::ifstream derpstream;
+	std::stringstream ss;
 	std::string derpinput;
 	derpstream.open(_file);
 
 	if (derpstream.is_open()) {
-		while (!derpstream.eof()) {
-
-			derpstream >> derpinput;
-
+		derpstream >> derpinput;
+	}
+	
+	// % = new layer array
+	// & = new block array
+	
+	for (int i = 0; i < derpinput.size(); ++i) {
+		std::string derpstring = derpinput[i]
+		if (isalnum(derpstring)) {
+			if (isalpha(derpstring)) {
+				testblock.push_back(derpstring);
+			} else {
+				// it's a number
+				testlayer.push_back(derpstring);
+			}
+		} else {
+			if (derpstring == "%") {
+				// new layer vector
+				// Meh just gonna try this, would be nice to pass the address as we wont need the actual name
+				std::vector<int>* testlayer[i] = new std::vector<int>;
+			} else if (derpstring == "&") {
+				// new block vector
+				std::vector<std::string> testblock[i];
+			} else {
+				continue;
+			}
 		}
 	}
 
