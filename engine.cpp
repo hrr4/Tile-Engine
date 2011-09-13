@@ -308,8 +308,9 @@ std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::vector<std::string
 		tempTile = new Tile;
 
 		tempTile->clip = &_clip[i];
+		// This will need fixing guaranteed
 		tempTile->type = _typeArray->at(i);
-		tempTile->layer = _layerArray[i];
+		tempTile->layer = layerVector2[i];
 
 		tempVec.push_back(tempTile);
 
