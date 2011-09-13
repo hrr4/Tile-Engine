@@ -7,7 +7,9 @@
 #include <gl/GLU.h>
 #include <string>
 #include <vector>
-#include <cctype> //<ctype.h>
+#include <cctype>
+#include <sstream>
+#include <iostream>
 
 /* IDEAS still needing implemented:
 	-Particle Effects - For lights n stuff
@@ -391,56 +393,91 @@ bool init_GL() {
 }
  
 void Plane::Read(std::string _file) {
+	std::vector<std::string>* testblock;
+	std::vector<int>* testlayer;
 	// vector of layer vectors
-	std::vector<std::vector<int>> layerVector2;
+	std::vector<std::vector<int>*> layerVector2;
 	// vector of block vectors
-	std::vector<std::vector<std::string>> blockVector2;
+	std::vector<std::vector<std::string>*> blockVector2;
 	
 	//int pos;
 	std::ifstream derpstream;
+	std::string derpinput, derpTest;
+	char test;
 	std::stringstream ss;
-	std::string derpinput;
 	derpstream.open(_file);
 
 	if (derpstream.is_open()) {
-		derpstream >> derpinput;
-	}
-	
-	// % = new layer array
-	// & = new block array
-	
-	for (int i = 0; i < derpinput.size(); ++i) {
-		std::string derpstring = derpinput[i]
-		if (isalnum(derpstring)) {
-			if (isalpha(derpstring)) {
-				testblock.push_back(derpstring);
-			} else {
-				// it's a number
-				testlayer.push_back(derpstring);
-			}
-		} else {
-			if (derpstring == "%") {
-				// new layer vector
-				// Meh just gonna try this, would be nice to pass the address as we wont need the actual name
-				std::vector<int>* testlayer[i] = new std::vector<int>;
-			} else if (derpstring == "&") {
-				// new block vector
-				std::vector<std::string> testblock[i];
-			} else {
-				continue;
+		derpstream.seekg(0, std::ios::beg);
+		while (std::getline(derpstream, derpinput)) {
+			for (int i = 0; i < derpinput.length(); ++i) {
+				test = derpinput[i];
+				ss << test;
+				ss >> derpTest;
+				if (isalnum(derpinput[i])) {
+					if (isalpha(derpinput[i])) {
+						testblock->push_back(derpTest);
+					} else {
+						// it's a number
+						testlayer->push_back(atoi(derpTest.c_str()));
+					}
+				} else {
+					if (derpTest == "%") {
+						// new layer vector
+						// Meh just gonna try this, would be nice to pass the address as we wont need the actual name
+						testlayer = new std::vector<int>;
+						layerVector2.push_back(testlayer);
+					} else if (derpTest == "&") {
+						// new block vector
+						testblock = new std::vector<std::string>;
+						blockVector2.push_back(testblock);
+					}
+				}
+				ss.clear();
 			}
 		}
 	}
 
 	derpstream.close();
+
+
+	// % = new layer array
+	// & = new block array
+	
+	/*for (int i = 0; i < derpinput.length(); ++i) {
+		test = derpinput[i];
+		ss << test;
+		ss >> derpTest;
+		if (isalnum(derpinput[i])) {
+			if (isalpha(derpinput[i])) {
+				testblock->push_back(derpTest);
+			} else {
+				// it's a number
+				testlayer->push_back(atoi(derpTest.c_str()));
+			}
+		} else {
+			if (derpTest == "%") {
+				// new layer vector
+				// Meh just gonna try this, would be nice to pass the address as we wont need the actual name
+				testlayer = new std::vector<int>;
+				layerVector2.push_back(testlayer);
+			} else if (derpTest == "&") {
+				// new block vector
+				testblock = new std::vector<std::string>;
+				blockVector2.push_back(testblock);
+			}
+		}
+		ss.clear();
+	}
+	*/
 }
 
 int main(int argc, char *argv[]) {
 	Plane tileset = Plane();
 	bool quit = false, isFullscreen = false;
  
-	std::vector<std::string> testType(typeArray, typeArray + sizeof(typeArray) / sizeof(std::string));
-	std::vector<SDL_Rect*> clipRect;
+	std::vector<std::string> testType;
+
 	if ((SDL_Init(SDL_INIT_EVERYTHING)==-1)) 
 		return true;
 
@@ -449,7 +486,7 @@ int main(int argc, char *argv[]) {
 	if (init_GL() == false)
 		return false;
  
-	tileset.Read("test.level");
+	tileset.Read("test2.level");
 
 	tileMap = tileset.Load("tileset16.png");
 
