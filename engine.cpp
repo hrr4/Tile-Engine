@@ -9,7 +9,6 @@
 #include <vector>
 #include <cctype>
 #include <sstream>
-#include <iostream>
 
 /* IDEAS still needing implemented:
 	-Particle Effects - For lights n stuff
@@ -200,7 +199,10 @@ private:
 	GLuint texture[1];
 	GLenum texture_format;
 	std::vector<Tile*> tilesVec;
-
+	// vector of layer vectors
+	std::vector<std::vector<int>*> layerVector2;
+	// vector of block vectors
+	std::vector<std::vector<std::string>*> blockVector2;
 	int nextPowerOfTwo(int _num);
 };
 
@@ -393,41 +395,43 @@ bool init_GL() {
 }
  
 void Plane::Read(std::string _file) {
-	std::vector<std::string>* testblock;
+	std::vector<char>* testblock;
+	//std::vector<std::string>* testblock;
 	std::vector<int>* testlayer;
-	// vector of layer vectors
-	std::vector<std::vector<int>*> layerVector2;
-	// vector of block vectors
-	std::vector<std::vector<std::string>*> blockVector2;
-	
-	//int pos;
 	std::ifstream derpstream;
-	std::string derpinput, derpTest;
-	char test;
-	std::stringstream ss;
+	std::string derpinput;//, derpTest;
+	//char test;
+	//std::stringstream ss;
 	derpstream.open(_file);
 
+	// % = new layer array
+	// & = new block array
+	
 	if (derpstream.is_open()) {
 		derpstream.seekg(0, std::ios::beg);
 		while (std::getline(derpstream, derpinput)) {
 			for (int i = 0; i < derpinput.length(); ++i) {
 				test = derpinput[i];
-				ss << test;
-				ss >> derpTest;
+				//ss << test;
+				//ss >> derpTest;
 				if (isalnum(derpinput[i])) {
 					if (isalpha(derpinput[i])) {
-						testblock->push_back(derpTest);
+						//testblock->push_back(derpTest);\
+						testblock->push_back(derpinput[i]);
 					} else {
 						// it's a number
-						testlayer->push_back(atoi(derpTest.c_str()));
+						testlayer->push_back(derpinput[i]);
+						//testlayer->push_back(atoi(derpTest.c_str()));
 					}
 				} else {
-					if (derpTest == "%") {
+					//if (derpTest == "%") {
+					if (derpinput[i] == "%") {
 						// new layer vector
 						// Meh just gonna try this, would be nice to pass the address as we wont need the actual name
 						testlayer = new std::vector<int>;
 						layerVector2.push_back(testlayer);
-					} else if (derpTest == "&") {
+					} //else if (derpTest == "&") {
+						else if (derpinput[i] == "&") {
 						// new block vector
 						testblock = new std::vector<std::string>;
 						blockVector2.push_back(testblock);
@@ -437,39 +441,7 @@ void Plane::Read(std::string _file) {
 			}
 		}
 	}
-
 	derpstream.close();
-
-
-	// % = new layer array
-	// & = new block array
-	
-	/*for (int i = 0; i < derpinput.length(); ++i) {
-		test = derpinput[i];
-		ss << test;
-		ss >> derpTest;
-		if (isalnum(derpinput[i])) {
-			if (isalpha(derpinput[i])) {
-				testblock->push_back(derpTest);
-			} else {
-				// it's a number
-				testlayer->push_back(atoi(derpTest.c_str()));
-			}
-		} else {
-			if (derpTest == "%") {
-				// new layer vector
-				// Meh just gonna try this, would be nice to pass the address as we wont need the actual name
-				testlayer = new std::vector<int>;
-				layerVector2.push_back(testlayer);
-			} else if (derpTest == "&") {
-				// new block vector
-				testblock = new std::vector<std::string>;
-				blockVector2.push_back(testblock);
-			}
-		}
-		ss.clear();
-	}
-	*/
 }
 
 int main(int argc, char *argv[]) {
