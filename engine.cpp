@@ -83,7 +83,7 @@ public:
 	Plane() : pSurface(NULL), x(0), y(0) {};
 	SDL_Surface* Load(std::string _filename);
 	void generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
-	std::vector<Tile*> generateTiles(int* _tileArray, std::vector<std::string>* _typeArray, short int* _layerArray, SDL_Rect* _clip);
+	std::vector<Tile*> generateTiles(SDL_Rect* _clip);
 	SDL_Surface* assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec);
 	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip);
 	void Read(std::string _file);
@@ -171,17 +171,24 @@ void Plane::generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileH
 	int Incr = 0, row = 0, xPos = 0, maxWidth = _Source->w, testRow = 0;
 	int arrayYTest = 0;
 	int arrayTest = 0;
+	int derp = 0;
+	int j = 0;
 
-	for (GLint i = 0; i <= ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		arrayTest = tileArray3[row][xPos];
-		clip[xPos+Incr].x = (arrayTest * _tileWidth);
-		clip[xPos+Incr].y = (arrayYTest * _tileHeight);
-		clip[xPos+Incr].w = _tileWidth;
-		clip[xPos+Incr].h = _tileHeight;
+	for (GLint i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+		derp = xPos+Incr;
+		if (j < layerVector2.size()) {
+			arrayTest = layerVector2[j]->at(derp);
+		} else {
+			j++;
+		}
+		clip[derp].x = (arrayTest * _tileWidth);
+		clip[derp].y = (arrayYTest * _tileHeight);
+		clip[derp].w = _tileWidth;
+		clip[derp].h = _tileHeight;
 		// this probably wont work right..but i'll get to it later! :D
 		// Why can't i just do this in the xPos test below?
 		if ((arrayTest * _tileWidth) >= maxWidth) {
-			arrayYTest = tileArray3[++testRow][xPos];
+			//arrayYTest = layerVector2[++testRow][xPos];
 		}
 		if (xPos >= ROOM_WIDTH) {
 			row++;
@@ -194,7 +201,7 @@ void Plane::generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileH
 	}
 }
 
-std::vector<Tile*> Plane::generateTiles(int* _tileArray, std::vector<std::string>* _typeArray, short int* _layerArray, SDL_Rect* _clip) {
+std::vector<Tile*> Plane::generateTiles(SDL_Rect* _clip) {
 	std::vector<Tile*> tempVec;
 
 	Tile* tempTile;
@@ -356,7 +363,7 @@ int main(int argc, char *argv[]) {
 
 	tileset.generateClips(tileMap, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
-	std::vector<Tile*> tilesVec = tileset.generateTiles(*tileArray3, &testType, *layerArray, clip);
+	std::vector<Tile*> tilesVec = tileset.generateTiles(clip);
 	
 	tileMap = tileset.assembleMap(tileMap, tilesVec);
  
