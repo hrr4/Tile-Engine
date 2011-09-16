@@ -25,13 +25,13 @@ const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 const int SCREEN_BPP = 32;
  
-const int ROOM_WIDTH = 40;
-const int ROOM_HEIGHT = 30;
- 
 const int TILE_WIDTH = 16;
 const int TILE_HEIGHT = 16;
- 
-const int CLIP_MAX = 1200;
+
+const int ROOM_WIDTH = SCREEN_WIDTH/TILE_WIDTH;
+const int ROOM_HEIGHT = SCREEN_HEIGHT/TILE_HEIGHT;
+
+const int CLIP_MAX = ROOM_WIDTH*ROOM_HEIGHT;
 
 // SDL Shit
  
