@@ -17,6 +17,8 @@
 	- Read in approx 10 letters @ a time.
 	- Have a vector of vectors for block maps and vector of vectors for layer maps
 	- Keep them together in the file - aka layer1 block1 layer2 block2 etc.
+	
+	!!! Going to have to get rid of surfaces i think....
 */
  
 
@@ -84,20 +86,24 @@ public:
 	SDL_Surface* Load(std::string _filename);
 	void generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(SDL_Rect* _clip);
-	SDL_Surface* assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec);
+	void generateVertices();
+	void assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec);
 	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip);
 	void Read(std::string _file);
 
 private:
 	int x, y;
 	SDL_Surface* pSurface;
-	GLuint texture[1];
+	GLuint tileTex[CLIP_MAX];
+	GLuint tileset[1];
 	GLenum texture_format;
 	std::vector<Tile*> tilesVec;
 	// vector of layer vectors
 	std::vector<std::vector<int>*> layerVector2;
 	// vector of block vectors
 	std::vector<std::vector<char>*> blockVector2;
+	
+	std::vector<int> vertVec;
 	int nextPowerOfTwo(int _num);
 };
 
@@ -145,7 +151,8 @@ SDL_Surface* Plane::Load(std::string _filename) {
 			SDL_UnlockSurface(optimizedImage);
 		}
 
-		SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
+		// No reason to convert, as we're gonna try to get rid of surfaces altogether
+		//SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
 	}
 
 	nOfColors = optimizedImage->format->BytesPerPixel;
@@ -164,7 +171,32 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		}
 	}
 
-	return optimizedImage;
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glGenTextures(1, &tileset[0]);
+	glBindTexture(GL_TEXTURE_2D, tileset[0]);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, 4, optimizedImage->w, optimizedImage->h, 0, texture_format, GL_UNSIGNED_BYTE, optimizedImage->pixels);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
+	SDL_FreeSurface(optimizedImage);
+}
+
+void Plane::generateVertices() {
+	vertVec.reserve((ROOM_WIDTH*2)*(ROOM_HEIGHT*2));
+	int xPos = 0, yPos = 0;
+	for (int i = 0; i < vertVec.size(); ++i) {
+		if (xPos < ROOM_WIDTH) {
+			// Only need to build 2 vertices per iteration here, v0 = top left, v1 = bottom left
+			vertVec.push_back(xPos+yPos); vertVec.push_back(xPos+yPos); // v0
+			vertVec.push_back(xPos+yPos); vertVec.push_back((xPos+yPos)*TILE_HEIGHT); // v1
+			xPos += TILE_WIDTH;
+		} else {
+			xPos = 0;
+			yPos += TILE_HEIGHT;
+		}
+	}
 }
 
 void Plane::generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
@@ -201,6 +233,35 @@ void Plane::generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileH
 	}
 }
 
+// Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
+
+void Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
+	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH*TILE_WIDTH, ROOM_HEIGHT*TILE_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
+
+	int Incr = 0, row = 0, xPos = 0;
+	
+	for (GLint i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
+		//applySurface(xPos * _tilesVec[i]->clip->w, row * _tilesVec[i]->clip->h, _Source, tempSurface, _tilesVec[i]->clip);
+		// A texture per quad
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		glGenTextures(1, &tileTex[i]);
+		glBindTexture(GL_TEXTURE_2D, tileTex[i]);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, TILE_WIDTH, TILE_HEIGHT, 0, texture_format, GL_UNSIGNED_BYTE, tileset);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		
+		if (xPos >= (ROOM_WIDTH-1)) {
+			row++;
+			Incr+=xPos;
+			xPos = 0;
+		} else {
+			xPos++;
+		}
+	}
+}
+
 std::vector<Tile*> Plane::generateTiles(SDL_Rect* _clip) {
 	std::vector<Tile*> tempVec;
 
@@ -228,35 +289,7 @@ std::vector<Tile*> Plane::generateTiles(SDL_Rect* _clip) {
 	return tempVec;
 }
 
-// Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
 
-SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
-	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH*TILE_WIDTH, ROOM_HEIGHT*TILE_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
-
-	int Incr = 0, row = 0, xPos = 0;
-	
-	for (GLint i = 0; i < ROOM_HEIGHT*ROOM_WIDTH; ++i) {
-		applySurface(xPos * _tilesVec[i]->clip->w, row * _tilesVec[i]->clip->h, _Source, tempSurface, _tilesVec[i]->clip);
-		if (xPos >= (ROOM_WIDTH-1)) {
-			row++;
-			Incr+=xPos;
-			xPos = 0;
-		}	else {
-			xPos++;
-		}
-	}
-	
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glGenTextures(1, &texture[0]);
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, 4, tempSurface->w, tempSurface->h, 0, texture_format, GL_UNSIGNED_BYTE, tempSurface->pixels);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	return tempSurface;
-}
 
 void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -269,12 +302,14 @@ void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Re
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
 	// Build
-	glBegin(GL_QUADS);
+	/*glBegin(GL_QUADS);
 		glTexCoord2f(0, 0); glVertex2i(0, 0);
 		glTexCoord2f(1, 0); glVertex2i(ROOM_WIDTH*TILE_WIDTH, 0);
 		glTexCoord2f(1, 1); glVertex2i(ROOM_WIDTH*TILE_WIDTH, ROOM_HEIGHT*TILE_HEIGHT);
 		glTexCoord2f(0, 1); glVertex2i(0, ROOM_HEIGHT*TILE_HEIGHT);
-	glEnd();
+	glEnd();*/
+	//glBegin(GL_TRIANGLE_STRIP);
+	glDrawElements(GL_TRIANGLE_STRIP, (ROOM_WIDTH*2)*(ROOM_HEIGHT*2), GL_UNSIGNED_BYTE, &vertVec);
 
 	//Reset
 	glLoadIdentity();
