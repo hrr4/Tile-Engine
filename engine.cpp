@@ -259,8 +259,7 @@ SDL_Surface* Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesV
 }
 
 void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip) {
-	glClear(GL_DEPTH_BUFFER_BIT);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	applySurface(0, 0, _blitSource, _blitDestination, NULL);
 
@@ -283,7 +282,18 @@ void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Re
 
 bool init_GL() {
 	glClearColor(0, 0, 0, 0);
+	GLfloat light_position[] = {.2, 1, 1, 0};
+	GLfloat light_ambient[] = {0, 0, 0, -1};
+
+	glShadeModel(GL_SMOOTH);
+
+	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+	//glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
 	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_DEPTH_TEST);
 
 	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
