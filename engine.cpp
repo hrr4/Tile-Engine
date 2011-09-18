@@ -86,7 +86,7 @@ public:
 	void Load(std::string _filename);
 	void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(SDL_Rect* _clip);
-	void generateVertices();
+	void generateElements();
 	void assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec);
 	void Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip);
 	void Read(std::string _file);
@@ -103,7 +103,9 @@ private:
 	// vector of block vectors
 	std::vector<std::vector<char>*> blockVector2;
 	
-	std::vector<int> vertVec;
+	std::vector<float> vertVec;
+	std::vector<float> uvVec;
+	std::vector<int> indiVec;
 	int nextPowerOfTwo(int _num);
 };
 
@@ -180,8 +182,9 @@ void Plane::Load(std::string _filename) {
 	SDL_FreeSurface(optimizedImage);
 }
 
-void Plane::generateVertices() {
+void Plane::generateElements() {
 	vertVec.reserve((ROOM_WIDTH*2)*(ROOM_HEIGHT*2));
+	uvVec.reserve()
 	int xPos = 0, yPos = 0;
 	for (int i = 0; i < vertVec.size(); ++i) {
 		if (xPos < ROOM_WIDTH) {
@@ -309,9 +312,27 @@ void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Re
 		glTexCoord2f(1, 0); glVertex2i(ROOM_WIDTH*TILE_WIDTH, 0);
 		glTexCoord2f(1, 1); glVertex2i(ROOM_WIDTH*TILE_WIDTH, ROOM_HEIGHT*TILE_HEIGHT);
 		glTexCoord2f(0, 1); glVertex2i(0, ROOM_HEIGHT*TILE_HEIGHT);
-	glEnd();*/
+	glEnd();
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+glTexCoordPointer(2,GL_FLOAT,0,self.uvRef);
+
+glEnableClientState(GL_NORMAL_ARRAY);
+glNormalPointer(3, GL_FLOAT,0,self.normsRef);
+
+glEnableClientState(GL_VERTEX_ARRAY);
+glVertexPointer(3, GL_FLOAT,0,self.vertsRef);
+glDrawElements(GL_TRIANGLES,self.indicesSize,GL_UNSIGNED_SHORT,self.indicesRef);
+	
+	*/
 	//glBegin(GL_TRIANGLE_STRIP);
-	glDrawElements(GL_TRIANGLE_STRIP, (ROOM_WIDTH*2)*(ROOM_HEIGHT*2), GL_UNSIGNED_BYTE, &vertVec);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glTexCoordPointer(2,GL_FLOAT,0, &uvVec);
+	
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glVertexPointer(2, GL_FLOAT, 0, &vertVec);
+	
+	glDrawElements(GL_TRIANGLE_STRIP, (ROOM_WIDTH*2)*(ROOM_HEIGHT*2), GL_UNSIGNED_BYTE, &indiVec);
+	
 
 	//Reset
 	glLoadIdentity();
@@ -409,6 +430,8 @@ int main(int argc, char *argv[]) {
 	/*tileMap = */tileset.Load("tileset16.png");
 
 	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
+	
+	tileset.generateElements();
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(clip);
 	
