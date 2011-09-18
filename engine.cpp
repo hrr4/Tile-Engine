@@ -83,8 +83,8 @@ void putPixel32(SDL_Surface* _source, int x, int y, Uint32 _pixel) {
 class Plane {
 public:
 	Plane() : pSurface(NULL), x(0), y(0) {};
-	SDL_Surface* Load(std::string _filename);
-	void generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
+	void Load(std::string _filename);
+	void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax);
 	std::vector<Tile*> generateTiles(SDL_Rect* _clip);
 	void generateVertices();
 	void assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec);
@@ -118,7 +118,7 @@ int Plane::nextPowerOfTwo(int _num) {
 	return _num;
 }
 
-SDL_Surface* Plane::Load(std::string _filename) {
+void Plane::Load(std::string _filename) {
 	GLint nOfColors;
 	SDL_Surface* loadedImage = IMG_Load(_filename.c_str()), *optimizedImage = NULL;
 	Uint32 colorkey = 0, pixel = 0;
@@ -150,9 +150,6 @@ SDL_Surface* Plane::Load(std::string _filename) {
 		if (SDL_MUSTLOCK(optimizedImage)) {
 			SDL_UnlockSurface(optimizedImage);
 		}
-
-		// No reason to convert, as we're gonna try to get rid of surfaces altogether
-		//SDL_ConvertSurface(optimizedImage, optimizedImage->format, SDL_HWSURFACE | SDL_RLEACCEL);
 	}
 
 	nOfColors = optimizedImage->format->BytesPerPixel;
@@ -199,8 +196,13 @@ void Plane::generateVertices() {
 	}
 }
 
-void Plane::generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
-	int Incr = 0, row = 0, xPos = 0, maxWidth = _Source->w, testRow = 0;
+void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
+	GLint texWidth[1], texHeight[1]; 
+
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, texWidth);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, texHeight);
+
+	int Incr = 0, row = 0, xPos = 0, testRow = 0;
 	int arrayYTest = 0;
 	int arrayTest = 0;
 	int derp = 0;
@@ -219,7 +221,7 @@ void Plane::generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileH
 		clip[derp].h = _tileHeight;
 		// this probably wont work right..but i'll get to it later! :D
 		// Why can't i just do this in the xPos test below?
-		if ((arrayTest * _tileWidth) >= maxWidth) {
+		if ((arrayTest * _tileWidth) >= *texWidth) {
 			//arrayYTest = layerVector2[++testRow][xPos];
 		}
 		if (xPos >= ROOM_WIDTH) {
@@ -236,7 +238,7 @@ void Plane::generateClips(const SDL_Surface* _Source, int _tileWidth, int _tileH
 // Assemble Map - This will put the tiles/clips onto an RGB Surface, and queue it for blit.
 
 void Plane::assembleMap(SDL_Surface* _Source, std::vector<Tile*> _tilesVec)  {
-	SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH*TILE_WIDTH, ROOM_HEIGHT*TILE_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);
+	/*SDL_Surface* tempSurface = SDL_CreateRGBSurface(NULL, ROOM_WIDTH*TILE_WIDTH, ROOM_HEIGHT*TILE_HEIGHT, 32, _Source->format->Rmask, _Source->format->Gmask, _Source->format->Bmask, _Source->format->Amask);*/
 
 	int Incr = 0, row = 0, xPos = 0;
 	
@@ -322,7 +324,7 @@ bool init_GL() {
 
 	glShadeModel(GL_SMOOTH);
 
-	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+	//glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
 	//glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
 	glEnable(GL_TEXTURE_2D);
@@ -404,13 +406,13 @@ int main(int argc, char *argv[]) {
  
 	tileset.Read("test2.level");
 
-	tileMap = tileset.Load("tileset16.png");
+	/*tileMap = */tileset.Load("tileset16.png");
 
-	tileset.generateClips(tileMap, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
+	tileset.generateClips(GL_TEXTURE_2D, TILE_WIDTH, TILE_HEIGHT, clip, CLIP_MAX);
 
 	std::vector<Tile*> tilesVec = tileset.generateTiles(clip);
 	
-	tileMap = tileset.assembleMap(tileMap, tilesVec);
+	/*tileMap = */tileset.assembleMap(tileMap, tilesVec);
  
 	while (quit == false) {
 		while (SDL_PollEvent(&Event)) {
