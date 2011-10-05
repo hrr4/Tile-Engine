@@ -44,6 +44,15 @@ SDL_Event Event;
  
 SDL_Rect clip[CLIP_MAX];
 
+typedef struct {
+	GLfloat position[3]; // Pos
+	GLfloat tex[4]; // TexCoord 0
+	GLfloat normal[3]; // Normal for lighting n sich
+	//GLubyte padding[14];
+} TileVertex;
+
+TileVertex testVertexArray[(ROOM_WIDTH*2)*(ROOM_HEIGHT*2)];
+
 // need this to associate types w/ clips = Tiles!
 
 struct Tile {
@@ -80,6 +89,10 @@ void putPixel32(SDL_Surface* _source, int x, int y, Uint32 _pixel) {
 // So eventually it'll need to be the size of the level
 // Not the size of the screen.
 
+int indiArray[10] = {
+	0,1,2,3,2,1,3,2,3,4
+};
+
 class Plane {
 public:
 	Plane() : pSurface(NULL), x(0), y(0) {};
@@ -103,8 +116,8 @@ private:
 	// vector of block vectors
 	std::vector<std::vector<char>*> blockVector2;
 	
-	std::vector<float> vertVec;
-	std::vector<float> uvVec;
+	/*std::vector<float> vertVec;
+	std::vector<float> uvVec;*/
 	std::vector<int> indiVec;
 	int nextPowerOfTwo(int _num);
 };
@@ -183,20 +196,38 @@ void Plane::Load(std::string _filename) {
 }
 
 void Plane::generateElements() {
-	vertVec.reserve((ROOM_WIDTH*2)*(ROOM_HEIGHT*2));
-	uvVec.reserve()
-	int xPos = 0, yPos = 0;
-	for (int i = 0; i < vertVec.size(); ++i) {
-		if (xPos < ROOM_WIDTH) {
-			// Only need to build 2 vertices per iteration here, v0 = top left, v1 = bottom left
-			vertVec.push_back(xPos+yPos); vertVec.push_back(xPos+yPos); // v0
-			vertVec.push_back(xPos+yPos); vertVec.push_back((xPos+yPos)*TILE_HEIGHT); // v1
-			xPos += TILE_WIDTH;
-		} else {
-			xPos = 0;
-			yPos += TILE_HEIGHT;
-		}
+	int xPos = 0, yPos = 0, total = (ROOM_WIDTH*2)*(ROOM_HEIGHT*2);
+	bool top = true;
+
+	for (int i = 0; i < total; ++i) {
+				if (xPos < ROOM_WIDTH) {
+					// Only need to build 2 vertices per iteration here, v0 = top left, v1 = bottom left
+					if (top == true) {
+						testVertexArray[i].position[0] = xPos+yPos; testVertexArray[i].position[1] = xPos+yPos;
+						testVertexArray[i].tex[0] = 0; testVertexArray[i].tex[1] = 0;
+						testVertexArray[i].tex[2] = 1; testVertexArray[i].tex[3] = 0;
+						top = false;
+					} else {
+						testVertexArray[i].position[0] = xPos+yPos; testVertexArray[i].position[1] = (xPos+yPos)+TILE_HEIGHT;
+						testVertexArray[i].tex[0] = 1; testVertexArray[i].tex[1] = 1;
+						testVertexArray[i].tex[2] = 0; testVertexArray[i].tex[3] = 1;
+						top = true;
+					}
+					xPos += TILE_WIDTH;
+				} else {
+					xPos = 0;
+					yPos += TILE_HEIGHT;
+				}
 	}
+	/*for (int i = 0; i < total; ++i) {
+		uvVec.push_back(0); uvVec.push_back(0);
+		uvVec.push_back(1); uvVec.push_back(0);
+		uvVec.push_back(1); uvVec.push_back(1);
+		uvVec.push_back(0); uvVec.push_back(1);
+	}*/
+	for (int i = 0; i < total; ++i) {
+		indiVec.push_back(0); indiVec.push_back(1);indiVec.push_back(2);indiVec.push_back(2);indiVec.push_back(1);indiVec.push_back(3);
+		}
 }
 
 void Plane::generateClips(GLenum _target, int _tileWidth, int _tileHeight, SDL_Rect* _clip, int _clipMax) {
@@ -295,7 +326,6 @@ std::vector<Tile*> Plane::generateTiles(SDL_Rect* _clip) {
 }
 
 
-
 void Plane::Draw(SDL_Surface* _blitSource, SDL_Surface* _blitDestination, SDL_Rect* clip) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -326,14 +356,14 @@ glDrawElements(GL_TRIANGLES,self.indicesSize,GL_UNSIGNED_SHORT,self.indicesRef);
 	*/
 	//glBegin(GL_TRIANGLE_STRIP);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glTexCoordPointer(2,GL_FLOAT,0, &uvVec);
+	glTexCoordPointer(4,GL_FLOAT,0, &testVertexArray->tex);
 	
 	glEnableClientState(GL_VERTEX_ARRAY);
-	glVertexPointer(2, GL_FLOAT, 0, &vertVec);
+	glVertexPointer(2, GL_FLOAT, 0, &testVertexArray->position);
 	
-	glDrawElements(GL_TRIANGLE_STRIP, (ROOM_WIDTH*2)*(ROOM_HEIGHT*2), GL_UNSIGNED_BYTE, &indiVec);
+	//glDrawElements(GL_TRIANGLE_STRIP, (ROOM_WIDTH*2)*(ROOM_HEIGHT*2), GL_UNSIGNED_BYTE, &indiVec);
+	glDrawElements(GL_TRIANGLE_STRIP, /*(ROOM_WIDTH*2)*(ROOM_HEIGHT*2)*/7200, GL_UNSIGNED_BYTE, &indiArray);
 	
-
 	//Reset
 	glLoadIdentity();
 }
@@ -349,9 +379,9 @@ bool init_GL() {
 	//glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
 	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_LIGHTING);
+	/*glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
-	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);*/
 
 	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
